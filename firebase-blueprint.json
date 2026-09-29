@@ -1,0 +1,166 @@
+{
+  "entities": {
+    "Admin": {
+      "title": "Admin Profile",
+      "description": "Administrator user profile",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string", "enum": ["admin"] },
+        "name": { "type": "string", "maxLength": 100 },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["role", "name", "isActive"]
+    },
+    "User": {
+      "title": "Branch User Profile",
+      "description": "Sales/Branch user profile",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string", "enum": ["sales"] },
+        "branchId": { "type": "string", "maxLength": 50 },
+        "name": { "type": "string", "maxLength": 100 },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["role", "branchId", "name", "isActive"]
+    },
+    "Branch": {
+      "title": "Branch Location",
+      "description": "Physical branch or retail store",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "maxLength": 20 },
+        "name": { "type": "string", "maxLength": 100 },
+        "isActive": { "type": "boolean" },
+        "defaultInventoryLocationId": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["code", "name", "isActive"]
+    },
+    "AppSettings": {
+      "title": "Application Settings",
+      "description": "Global system pointers like active catalog version and revision",
+      "type": "object",
+      "properties": {
+        "activeCatalogVersionId": { "type": "string", "maxLength": 100 },
+        "activeInventoryRevision": { "type": "integer" }
+      },
+      "required": ["activeCatalogVersionId", "activeInventoryRevision"]
+    },
+    "CatalogVersion": {
+      "title": "Catalog Version",
+      "description": "Version metadata for full inventory catalog baselines",
+      "type": "object",
+      "properties": {
+        "versionId": { "type": "string", "maxLength": 100 },
+        "status": { "type": "string", "enum": ["staged", "uploading", "verified", "active", "failed"] },
+        "productCount": { "type": "integer" }
+      },
+      "required": ["versionId", "status"]
+    },
+    "InventoryUpdate": {
+      "title": "Inventory Update Delta",
+      "description": "Daily inventory delta update metadata",
+      "type": "object",
+      "properties": {
+        "updateId": { "type": "string", "maxLength": 100 },
+        "revision": { "type": "integer" },
+        "status": { "type": "string", "enum": ["staged", "uploading", "verified", "published", "failed"] }
+      },
+      "required": ["updateId", "revision", "status"]
+    },
+    "BarcodeAlias": {
+      "title": "Barcode Alias",
+      "description": "Alternative barcodes associated with products",
+      "type": "object",
+      "properties": {
+        "barcode": { "type": "string", "maxLength": 100 },
+        "itemCode": { "type": "string", "maxLength": 50 },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["barcode", "itemCode", "isActive"]
+    },
+    "ErrorReport": {
+      "title": "Error Report",
+      "description": "Branch-submitted error reports",
+      "type": "object",
+      "properties": {
+        "itemCode": { "type": "string", "maxLength": 50 },
+        "branchId": { "type": "string", "maxLength": 50 },
+        "message": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["open", "reviewing", "resolved", "dismissed"] }
+      },
+      "required": ["itemCode", "branchId", "message", "status"]
+    },
+    "AuditLog": {
+      "title": "Audit Log",
+      "description": "System-wide admin action audit trail",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string", "maxLength": 100 },
+        "entityType": { "type": "string", "maxLength": 50 },
+        "uid": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["action", "entityType", "uid"]
+    },
+    "InventorySession": {
+      "title": "Inventory Count Session",
+      "description": "Branch inventory counting sessions",
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string", "maxLength": 100 },
+        "branchId": { "type": "string", "maxLength": 50 },
+        "status": { "type": "string", "enum": ["open", "closed", "reviewing"] }
+      },
+      "required": ["sessionId", "branchId", "status"]
+    }
+  },
+  "firestore": {
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "Admin user profiles"
+    },
+    "/users/{uid}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Branch user profiles"
+    },
+    "/branches/{branchId}": {
+      "schema": { "$ref": "#/entities/Branch" },
+      "description": "Physical branch definitions"
+    },
+    "/app_settings/global": {
+      "schema": { "$ref": "#/entities/AppSettings" },
+      "description": "Global application pointers"
+    },
+    "/catalog_versions/{versionId}": {
+      "schema": { "$ref": "#/entities/CatalogVersion" },
+      "description": "Catalog version metadata"
+    },
+    "/catalog_versions/{versionId}/chunks/{chunkId}": {
+      "schema": { "$ref": "#/entities/CatalogVersion" },
+      "description": "Catalog version chunk payloads"
+    },
+    "/catalog_versions/{versionId}/inventory_updates/{updateId}": {
+      "schema": { "$ref": "#/entities/InventoryUpdate" },
+      "description": "Daily inventory update metadata"
+    },
+    "/catalog_versions/{versionId}/inventory_updates/{updateId}/chunks/{chunkId}": {
+      "schema": { "$ref": "#/entities/InventoryUpdate" },
+      "description": "Inventory update chunk payloads"
+    },
+    "/barcode_aliases/{aliasId}": {
+      "schema": { "$ref": "#/entities/BarcodeAlias" },
+      "description": "Product barcode aliases"
+    },
+    "/error_reports/{reportId}": {
+      "schema": { "$ref": "#/entities/ErrorReport" },
+      "description": "Branch error reports"
+    },
+    "/audit_logs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "System audit trail"
+    },
+    "/inventory_sessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/InventorySession" },
+      "description": "Inventory counting sessions"
+    }
+  }
+}

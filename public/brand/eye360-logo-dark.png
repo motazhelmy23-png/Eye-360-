@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 120" width="500" height="120">
+  <style>
+    .word { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; font-size: 64px; font-weight: 700; fill: #FFFFFF; letter-spacing: -1px; }
+  </style>
+  <text x="0" y="85" class="word">Eye360</text>
+  <g transform="translate(370, 22)">
+    <circle cx="38" cy="38" r="36" fill="none" stroke="#2F81F7" stroke-width="8"/>
+    <path d="M 28 4 Q 38 1 48 4" fill="none" stroke="#0B1017" stroke-width="10" stroke-linecap="round"/>
+    <rect x="23" y="24" width="4" height="28" rx="2" fill="#FFFFFF"/>
+    <rect x="30" y="18" width="3" height="40" rx="1.5" fill="#FFFFFF"/>
+    <rect x="36" y="21" width="5" height="34" rx="2" fill="#FFFFFF"/>
+    <rect x="44" y="25" width="3" height="26" rx="1.5" fill="#FFFFFF"/>
+  </g>
+</svg>

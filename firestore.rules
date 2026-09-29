@@ -1,0 +1,189 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function isSignedIn() { return request.auth != null; }
+    
+    function getAdminDoc(uid) {
+      return get(/databases/$(database)/documents/admins/$(uid));
+    }
+    function getUserDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function isAdmin() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && 
+        getAdminDoc(request.auth.uid).data.isActive == true &&
+        getAdminDoc(request.auth.uid).data.role == 'admin';
+    }
+
+    function getBranchDoc(branchId) {
+      return get(/databases/$(database)/documents/branches/$(branchId));
+    }
+
+    function isBranchActive(branchId) {
+      return exists(/databases/$(database)/documents/branches/$(branchId)) &&
+        getBranchDoc(branchId).data.isActive == true;
+    }
+
+    function isActiveSalesWithActiveBranch() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        getUserDoc(request.auth.uid).data.isActive == true &&
+        getUserDoc(request.auth.uid).data.role == 'sales' &&
+        getUserDoc(request.auth.uid).data.branchId is string &&
+        getUserDoc(request.auth.uid).data.branchId.size() > 0 &&
+        isBranchActive(getUserBranchId());
+    }
+
+    function isSales() {
+      return isActiveSalesWithActiveBranch();
+    }
+
+    function getUserBranchId() {
+      return getUserDoc(request.auth.uid).data.branchId;
+    }
+
+    function getAppSettings() {
+      return get(/databases/$(database)/documents/app_settings/global);
+    }
+
+    function isActiveCatalog(versionId) {
+      return exists(/databases/$(database)/documents/app_settings/global) &&
+        getAppSettings().data.activeCatalogVersionId == versionId;
+    }
+
+    // --- DEFAULT DENY ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- 1. ADMINS ---
+    match /admins/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // --- 2. USERS (SALES / BRANCH ACCOUNTS) ---
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // --- 3. BRANCHES ---
+    match /branches/{branchId} {
+      allow read: if isAdmin() || isSales();
+      allow write: if isAdmin();
+    }
+
+    // --- 4. APP SETTINGS ---
+    match /app_settings/global {
+      allow read: if isAdmin() || isSales();
+      allow write: if isAdmin();
+    }
+
+    // --- 5. CATALOG VERSIONS & CHUNKS ---
+    match /catalog_versions/{versionId} {
+      allow get: if isAdmin() || (isSales() && isActiveCatalog(versionId));
+      allow list: if isAdmin();
+      allow write: if isAdmin();
+
+      match /chunks/{chunkId} {
+        allow read: if isAdmin() || (isSales() && isActiveCatalog(versionId));
+        allow write: if isAdmin();
+      }
+
+      match /inventory_updates/{updateId} {
+        allow get: if isAdmin() || (
+          isSales() && 
+          isActiveCatalog(versionId) && 
+          resource.data.status == 'published' && 
+          resource.data.targetRevision <= getAppSettings().data.activeInventoryRevision
+        );
+        allow list: if isAdmin() || (
+          isSales() && 
+          isActiveCatalog(versionId) &&
+          resource.data.status == 'published' &&
+          resource.data.targetRevision <= getAppSettings().data.activeInventoryRevision
+        );
+        allow write: if isAdmin();
+
+        match /chunks/{chunkId} {
+          allow read: if isAdmin() || (
+            isSales() && 
+            isActiveCatalog(versionId) &&
+            exists(/databases/$(database)/documents/catalog_versions/$(versionId)/inventory_updates/$(updateId)) &&
+            get(/databases/$(database)/documents/catalog_versions/$(versionId)/inventory_updates/$(updateId)).data.status == 'published' &&
+            get(/databases/$(database)/documents/catalog_versions/$(versionId)/inventory_updates/$(updateId)).data.targetRevision <= getAppSettings().data.activeInventoryRevision
+          );
+          allow write: if isAdmin();
+        }
+      }
+    }
+
+    // --- 6. BARCODE ALIASES ---
+    match /barcode_aliases/{aliasId} {
+      allow read: if isAdmin() || isSales();
+      allow write: if isAdmin();
+    }
+
+    // --- 7. ERROR REPORTS ---
+    match /error_reports/{reportId} {
+      allow read: if isAdmin() || (isSales() && resource.data.createdByUid == request.auth.uid);
+      allow create: if isSales() && 
+        request.resource.data.createdByUid == request.auth.uid &&
+        request.resource.data.branchId == getUserBranchId() &&
+        request.resource.data.status == 'open';
+      allow update, delete: if isAdmin();
+    }
+
+    // --- 8. AUDIT LOGS ---
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // --- 9. INVENTORY SESSIONS & ITEMS ---
+    match /inventory_sessions/{sessionId} {
+      allow read: if isAdmin() || (isSales() && resource.data.branchId == getUserBranchId());
+      allow write: if isAdmin();
+
+      match /items/{itemId} {
+        allow read: if isAdmin() || (
+          isSales() && 
+          get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.branchId == getUserBranchId()
+        );
+        
+        allow create: if isAdmin() || (
+          isSales() &&
+          exists(/databases/$(database)/documents/inventory_sessions/$(sessionId)) &&
+          get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.branchId == getUserBranchId() &&
+          get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.status == 'open' &&
+          request.resource.data.createdByUid == request.auth.uid &&
+          request.resource.data.branchId == getUserBranchId()
+        );
+
+        allow update: if isAdmin() || (
+          isSales() &&
+          exists(/databases/$(database)/documents/inventory_sessions/$(sessionId)) &&
+          get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.branchId == getUserBranchId() &&
+          get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.status == 'open' &&
+          resource.data.createdByUid == request.auth.uid &&
+          resource.data.branchId == getUserBranchId() &&
+          request.resource.data.createdByUid == resource.data.createdByUid &&
+          request.resource.data.branchId == resource.data.branchId &&
+          request.resource.data.itemCode == resource.data.itemCode &&
+          request.resource.data.zoneId == resource.data.zoneId
+        );
+
+        allow delete: if isAdmin();
+      }
+    }
+
+  }
+}

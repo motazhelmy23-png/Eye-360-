@@ -1,0 +1,25 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "inventory_updates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "targetRevision",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "chunks",
+      "fieldPath": "payloadJson",
+      "indexes": []
+    }
+  ]
+}
