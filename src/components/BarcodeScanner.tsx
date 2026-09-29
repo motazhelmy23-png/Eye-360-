@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats, Html5QrcodeCameraScanConfig } from 'html5-qrcode';
-import { AlertCircle, RefreshCw, Camera, SwitchCamera } from 'lucide-react';
+import { AlertCircle, RefreshCw, Camera, SwitchCamera, Tag, Play } from 'lucide-react';
 
 interface BarcodeScannerProps {
   onScanSuccess: (decodedText: string) => void;
@@ -8,7 +8,8 @@ interface BarcodeScannerProps {
 }
 
 export function BarcodeScanner({ onScanSuccess, onScanError }: BarcodeScannerProps) {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [started, setStarted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameras, setCameras] = useState<Array<{ id: string; label: string }>>([]);
   const [activeCameraIndex, setActiveCameraIndex] = useState(0);
@@ -37,6 +38,7 @@ export function BarcodeScanner({ onScanSuccess, onScanError }: BarcodeScannerPro
     successLockedRef.current = false;
     setLoading(true);
     setError(null);
+    setStarted(true);
 
     // 1. Secure context check
     const isSecure = window.isSecureContext || location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
@@ -144,14 +146,16 @@ export function BarcodeScanner({ onScanSuccess, onScanError }: BarcodeScannerPro
       setLoading(false);
       isScanningRef.current = false;
 
-      const name = err?.name || err?.message || '';
-      if (name.includes('NotAllowedError') || name.includes('PermissionDeniedError') || name.includes('Permission')) {
-        setError("تم رفض إذن الكاميرا. اسمح بالوصول إلى الكاميرا من إعدادات المتصفح ثم حاول مرة أخرى.");
-      } else if (name.includes('NotFoundError') || name.includes('DevicesNotFoundError')) {
+      const errStr = String(err?.name || '') + ' ' + String(err?.message || '') + ' ' + String(err || '');
+      const lower = errStr.toLowerCase();
+
+      if (lower.includes('notallowed') || lower.includes('permission') || lower.includes('denied')) {
+        setError("تم رفض إذن الكاميرا أو أن إطار المعاونة يمنع الوصول. اسمح بالوصول إلى الكاميرا من إعدادات المتصفح أو استخدم الباركود التجريبي أدناه.");
+      } else if (lower.includes('notfound') || lower.includes('devicesnotfound')) {
         setError("لم يتم العثور على كاميرا على هذا الجهاز.");
-      } else if (name.includes('NotReadableError') || name.includes('TrackStartError')) {
+      } else if (lower.includes('notreadable') || lower.includes('trackstart')) {
         setError("تعذر تشغيل الكاميرا. قد تكون مستخدمة بواسطة تطبيق آخر.");
-      } else if (name.includes('OverconstrainedError')) {
+      } else if (lower.includes('overconstrained')) {
         try {
           const devices = await Html5Qrcode.getCameras();
           if (devices && devices.length > 0) {
@@ -163,18 +167,16 @@ export function BarcodeScanner({ onScanSuccess, onScanError }: BarcodeScannerPro
         }
         setError("تعذر تشغيل الكاميرا بالمواصفات المطلوبة.");
       } else {
-        setError("تعذر تشغيل ماسح الباركود. حاول مرة أخرى.");
+        setError("تم رفض إذن الكاميرا أو تعذر تشغيل الماسح. يمكنك السماح بالصلاحية أو استخدام الباركود الفوري أدناه.");
       }
     }
   }, [divId, onScanSuccess, onScanError, stopScanner]);
 
   useEffect(() => {
-    startScanning({ facingMode: 'environment' });
-
     return () => {
       stopScanner();
     };
-  }, [startScanning, stopScanner]);
+  }, [stopScanner]);
 
   const handleSwitchCamera = () => {
     if (cameras.length <= 1) return;
@@ -185,31 +187,70 @@ export function BarcodeScanner({ onScanSuccess, onScanError }: BarcodeScannerPro
 
   return (
     <div className="w-full relative rounded-xl overflow-hidden bg-black border border-emerald-500/30 flex flex-col items-center justify-center min-h-[300px]">
+      {!started && !error && (
+        <div className="absolute inset-0 z-20 bg-[#0B1017] flex flex-col items-center justify-center p-6 space-y-4 text-center">
+          <Camera className="w-12 h-12 text-emerald-400 animate-pulse" />
+          <div className="space-y-1">
+            <h4 className="text-white text-sm font-semibold">تشغيل ماسح الباركود بالكاميرا</h4>
+            <p className="text-slate-400 text-xs max-w-xs leading-relaxed">انقر على الزر أدناه لبدء تشغيل الكاميرا ومنح إذن الوصول للمتصفح:</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => startScanning({ facingMode: 'environment' })}
+            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/30 transition-all"
+          >
+            <Play className="w-4 h-4 fill-current" />
+            بدء تشغيل الكاميرا الآن
+          </button>
+        </div>
+      )}
+
       {loading && (
         <div className="absolute inset-0 z-20 bg-black/85 flex flex-col items-center justify-center p-4 space-y-3">
           <RefreshCw className="w-8 h-8 text-emerald-400 animate-spin" />
-          <p className="text-sm text-slate-200 font-medium">جاري تشغيل الكاميرا...</p>
+          <p className="text-sm text-slate-200 font-medium">جاري تشغيل الكاميرا وطلب الإذن...</p>
         </div>
       )}
 
       {error ? (
-        <div className="p-6 text-center space-y-4 bg-[#0B1017] w-full min-h-[300px] flex flex-col items-center justify-center z-20">
-          <AlertCircle className="w-10 h-10 text-amber-400 mx-auto" />
+        <div className="p-5 text-center space-y-3 bg-[#0B1017] w-full min-h-[300px] flex flex-col items-center justify-center z-20">
+          <AlertCircle className="w-9 h-9 text-amber-400 mx-auto" />
           <p className="text-xs text-amber-200 max-w-xs leading-relaxed">{error}</p>
-          <button
-            type="button"
-            onClick={() => startScanning({ facingMode: 'environment' })}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer transition-colors shadow-lg shadow-emerald-600/20"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            إعادة المحاولة
-          </button>
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            <button
+              type="button"
+              onClick={() => startScanning({ facingMode: 'environment' })}
+              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow-lg shadow-emerald-600/20"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              إعادة المحاولة
+            </button>
+          </div>
+          <div className="pt-2 border-t border-white/10 w-full max-w-xs space-y-1.5">
+            <span className="text-[10px] text-slate-400 block font-medium">أو تجربة باركود فوري للفحص:</span>
+            <div className="flex flex-wrap gap-1.5 justify-center">
+              {['7394586123476', '11752', '6221144223311'].map(b => (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => {
+                    stopScanner();
+                    onScanSuccess(b);
+                  }}
+                  className="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[11px] font-mono cursor-pointer transition-colors flex items-center gap-1"
+                >
+                  <Tag className="w-3 h-3" />
+                  {b}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       ) : null}
 
       <div id={divId} className="w-full min-h-[300px] max-h-[400px] bg-black overflow-hidden relative" />
 
-      {!loading && !error && (
+      {started && !loading && !error && (
         <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-between p-4 z-10">
           <div className="bg-black/60 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10 text-center">
             <p className="text-[11px] text-emerald-300 font-medium">وجّه الكاميرا نحو الباركود وضعه بالكامل داخل الإطار</p>

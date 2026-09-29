@@ -556,6 +556,9 @@ export default function SalesDashboard({ profile, branchProfile, onLogout }: Sal
                   setShowCameraModal(false);
                   setCameraInput('');
                 }}
+                onScanError={(err) => {
+                  console.warn('Barcode scan error:', err);
+                }}
               />
               <input
                 type="text"

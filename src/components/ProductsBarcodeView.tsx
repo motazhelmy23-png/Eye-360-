@@ -424,6 +424,9 @@ export default function ProductsBarcodeView() {
                   setShowCameraModal(false);
                   setCameraInput('');
                 }}
+                onScanError={(err) => {
+                  console.warn('Barcode scan error:', err);
+                }}
               />
               <input
                 type="text"
