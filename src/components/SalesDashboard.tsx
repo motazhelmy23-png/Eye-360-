@@ -120,8 +120,7 @@ export default function SalesDashboard({ profile, branchProfile, onLogout }: Sal
     );
 
     if (exactMatches.length > 0) {
-      const others = products.filter(p => !exactMatches.includes(p));
-      setFilteredProducts([...exactMatches, ...others]);
+      setFilteredProducts(exactMatches);
       return;
     }
 
