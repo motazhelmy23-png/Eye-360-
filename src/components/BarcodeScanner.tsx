@@ -234,7 +234,7 @@ export function BarcodeScanner({ onScanSuccess, onScanError }: BarcodeScannerPro
       await runDiagnosticsData();
 
     } catch (err: any) {
-      console.error('Real camera startup error:', err);
+      console.warn('Real camera startup notice:', err);
       await fullCleanup();
       setLoading(false);
       setStarted(false);
