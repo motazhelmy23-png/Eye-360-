@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BarcodeScanner } from './BarcodeScanner';
+import { BarcodeLabelModal } from './BarcodeLabelModal';
 import { NormalizedProduct } from '../types/inventory';
 import { openCatalogDB, getActiveCatalogMeta, getLocalIndexedDbState, searchLocalProducts, getProductByBarcodeOrModel } from '../services/indexedDbService';
 import { quickCloudHealthCheck, CloudHealthResult } from '../services/dataIntegrityService';
@@ -7,7 +8,8 @@ import { syncMissedRevisions, getSyncDiagnostics, SyncDiagnosticsInfo } from '..
 import { 
   Barcode, Search, Shield, AlertTriangle, RefreshCw, CheckCircle2, 
   ChevronRight, ChevronLeft, Eye, X, HardDrive, Package, Cpu, 
-  Camera, Scan, Terminal, CheckCheck, Tag, ArrowUpRight
+  Camera, Scan, Terminal, CheckCheck, Tag, ArrowUpRight, Printer,
+  CheckSquare, Square
 } from 'lucide-react';
 
 export default function ProductsBarcodeView() {
@@ -23,6 +25,11 @@ export default function ProductsBarcodeView() {
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<SyncDiagnosticsInfo | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
+
+  // Batch Selection for Barcode Printing
+  const [selectedItemCodes, setSelectedItemCodes] = useState<Set<string>>(new Set());
+  const [productsToPrint, setProductsToPrint] = useState<NormalizedProduct[]>([]);
+  const [showLabelModal, setShowLabelModal] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -142,6 +149,42 @@ export default function ProductsBarcodeView() {
     }
   };
 
+  // Selection helpers for batch printing
+  const toggleSelectProduct = (itemCode: string) => {
+    const next = new Set(selectedItemCodes);
+    if (next.has(itemCode)) {
+      next.delete(itemCode);
+    } else {
+      next.add(itemCode);
+    }
+    setSelectedItemCodes(next);
+  };
+
+  const toggleSelectAllCurrentPage = () => {
+    const currentCodes = paginatedProducts.map(p => p.itemCode);
+    const allSelected = currentCodes.every(c => selectedItemCodes.has(c));
+    const next = new Set(selectedItemCodes);
+    if (allSelected) {
+      currentCodes.forEach(c => next.delete(c));
+    } else {
+      currentCodes.forEach(c => next.add(c));
+    }
+    setSelectedItemCodes(next);
+  };
+
+  const openPrintModalForProducts = (prods: NormalizedProduct[]) => {
+    if (prods.length === 0) return;
+    setProductsToPrint(prods);
+    setShowLabelModal(true);
+  };
+
+  const openPrintModalForSelected = () => {
+    const selected = products.filter(p => selectedItemCodes.has(p.itemCode));
+    if (selected.length > 0) {
+      openPrintModalForProducts(selected);
+    }
+  };
+
   const totalProducts = products.length;
   const productsWithStock = products.filter(p => p.totalStock > 0).length;
   const productsWithoutStock = totalProducts - productsWithStock;
@@ -149,14 +192,15 @@ export default function ProductsBarcodeView() {
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const isAllCurrentPageSelected = paginatedProducts.length > 0 && paginatedProducts.every(p => selectedItemCodes.has(p.itemCode));
 
   if (loading) {
     return (
-      <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-16 text-center space-y-3">
-        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mx-auto">
+      <div className="bg-white border border-slate-200 rounded-2xl p-16 text-center space-y-3 shadow-xs">
+        <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mx-auto">
           <RefreshCw className="w-5 h-5 animate-spin" />
         </div>
-        <p className="text-slate-400 text-xs">جاري تحميل الأصناف والباركود من قاعدة البيانات المحلية...</p>
+        <p className="text-slate-500 text-xs font-medium">جاري تحميل الأصناف والباركود من قاعدة البيانات المحلية...</p>
       </div>
     );
   }
@@ -165,137 +209,185 @@ export default function ProductsBarcodeView() {
     <div className="space-y-5">
       {/* Revision Status Strip */}
       {staleWarning ? (
-        <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
-            <span>البيانات المحلية تحتاج إلى مزامنة (المراجعة المحلية Rev {currentRevision} أقدم من السحابة Rev {cloudHealth?.activeInventoryRevision}).</span>
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-900 text-xs flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+            <span className="font-medium">البيانات المحلية تحتاج إلى مزامنة (المراجعة المحلية Rev {currentRevision} أقدم من السحابة Rev {cloudHealth?.activeInventoryRevision}).</span>
           </div>
           <button
             onClick={handleSyncNow}
             disabled={syncing}
-            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-sm"
+            className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 cursor-pointer shadow-xs transition-colors"
           >
-            <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
             <span>مزامنة الآن</span>
           </button>
         </div>
       ) : (
-        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-300 text-xs flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckCheck className="w-4 h-4 shrink-0 text-emerald-400" />
-            <span>البيانات المحلية متطابقة تماماً مع السحابة (Rev {currentRevision}).</span>
+        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 text-xs flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <CheckCheck className="w-4 h-4 shrink-0 text-emerald-600" />
+            <span className="font-medium">البيانات المحلية متطابقة تماماً مع السحابة (Rev {currentRevision}).</span>
           </div>
           <button
             onClick={handleSyncNow}
             disabled={syncing}
-            className="px-2.5 py-1 bg-[#131B26] hover:bg-[#1A2534] border border-white/[0.08] text-slate-300 rounded text-[11px] font-medium flex items-center gap-1.5 cursor-pointer"
+            className="px-3 py-1.5 bg-white hover:bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
           >
-            <RefreshCw className={`w-3 h-3 ${syncing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 ${syncing ? 'animate-spin' : ''}`} />
             <span>فحص التحديثات</span>
           </button>
         </div>
       )}
 
       {syncMessage && (
-        <div className="p-3 bg-[#111823] border border-white/[0.08] rounded-lg text-xs text-white flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>{syncMessage}</span>
+        <div className="p-3.5 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 flex items-center gap-2.5 shadow-xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span className="font-medium">{syncMessage}</span>
         </div>
       )}
 
       {/* Summary KPI Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-4 space-y-1">
-          <span className="text-slate-400 text-xs block">إجمالي الأصناف (Local DB)</span>
-          <span className="text-white font-bold text-xl font-mono tabular-nums">{totalProducts.toLocaleString()}</span>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-1 shadow-xs">
+          <span className="text-slate-500 text-xs font-medium block">إجمالي الأصناف (Local DB)</span>
+          <span className="text-slate-900 font-bold text-xl font-mono tabular-nums">{totalProducts.toLocaleString()}</span>
         </div>
-        <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-4 space-y-1">
-          <span className="text-slate-400 text-xs block">الأصناف المتوفرة بمخزون</span>
-          <span className="text-emerald-400 font-bold text-xl font-mono tabular-nums">{productsWithStock.toLocaleString()}</span>
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-1 shadow-xs">
+          <span className="text-slate-500 text-xs font-medium block">الأصناف المتوفرة بمخزون</span>
+          <span className="text-emerald-600 font-bold text-xl font-mono tabular-nums">{productsWithStock.toLocaleString()}</span>
         </div>
-        <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-4 space-y-1">
-          <span className="text-slate-400 text-xs block">أصناف بدون مخزون (صفر)</span>
-          <span className="text-slate-400 font-bold text-xl font-mono tabular-nums">{productsWithoutStock.toLocaleString()}</span>
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-1 shadow-xs">
+          <span className="text-slate-500 text-xs font-medium block">أصناف بدون مخزون (صفر)</span>
+          <span className="text-slate-500 font-bold text-xl font-mono tabular-nums">{productsWithoutStock.toLocaleString()}</span>
         </div>
-        <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-4 space-y-1">
-          <span className="text-slate-400 text-xs block">المراجعة الحالية</span>
-          <span className="text-emerald-400 font-bold text-xl font-mono tabular-nums">Rev {currentRevision}</span>
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-1 shadow-xs">
+          <span className="text-slate-500 text-xs font-medium block">المراجعة الحالية</span>
+          <span className="text-blue-600 font-bold text-xl font-mono tabular-nums">Rev {currentRevision}</span>
         </div>
       </div>
 
       {/* Search & Barcode Command Bar */}
-      <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-4 shadow-xl space-y-3">
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-3.5">
         <div className="flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="relative flex-1 w-full">
-            <Search className="w-4 h-4 text-slate-500 absolute right-3.5 top-3" />
+            <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3" />
             <input
               ref={searchInputRef}
               type="text"
-              placeholder="ابحث بررمز الصنف (itemCode)، الباركود (7394586123476)، الموديل، الاسم، أو الماركة..."
+              placeholder="ابحث برمز الصنف (itemCode)، الباركود، الموديل، الاسم، أو الماركة..."
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              className="w-full bg-[#0B1017] border border-white/[0.1] rounded-lg pr-10 pl-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/30 transition-colors font-mono"
+              className="w-full bg-slate-50 border border-slate-300 rounded-xl pr-10 pl-4 py-2.5 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-1 focus:ring-blue-600/30 transition-colors font-mono"
             />
           </div>
-          <button
-            onClick={() => setShowCameraModal(true)}
-            className="px-3.5 py-2.5 bg-[#131B26] hover:bg-[#1A2534] border border-white/[0.08] text-slate-200 rounded-lg text-xs font-medium flex items-center gap-2 shrink-0 transition-colors cursor-pointer"
-          >
-            <Camera className="w-3.5 h-3.5 text-emerald-400" />
-            <span>مسح بالكاميرا</span>
-          </button>
+
+          <div className="flex items-center gap-2.5 w-full md:w-auto">
+            {selectedItemCodes.size > 0 && (
+              <button
+                onClick={openPrintModalForSelected}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shrink-0 transition-colors cursor-pointer shadow-sm animate-pulse"
+              >
+                <Printer className="w-4 h-4" />
+                <span>طباعة باركود ({selectedItemCodes.size}) صنف</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => setShowCameraModal(true)}
+              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shrink-0 transition-colors cursor-pointer shadow-sm"
+            >
+              <Camera className="w-4 h-4" />
+              <span>مسح بالكاميرا</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center justify-between text-xs text-slate-500 font-mono px-1">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <span>النتائج:</span>
-            <strong className="text-white tabular-nums">{filteredProducts.length.toLocaleString()}</strong>
+            <strong className="text-slate-900 font-bold tabular-nums">{filteredProducts.length.toLocaleString()}</strong>
             <span>صنف</span>
+            {selectedItemCodes.size > 0 && (
+              <span className="text-blue-600 font-bold mr-2">
+                (المحدد: {selectedItemCodes.size} صنف)
+              </span>
+            )}
           </div>
-          <span className="text-[11px]">يدعم قارئات الباركود USB تلقائياً</span>
+          <span className="text-[11px] text-slate-400">يدعم قارئات الباركود USB وطابعات الملصقات الحرارية</span>
         </div>
       </div>
 
       {/* High Density Table */}
-      <div className="bg-[#111823] border border-white/[0.08] rounded-xl overflow-hidden shadow-xl">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-right text-xs">
-            <thead className="bg-[#0B1017] text-slate-400 font-mono border-b border-white/[0.08]">
+            <thead className="bg-slate-50 text-slate-600 font-mono border-b border-slate-200">
               <tr>
-                <th className="py-3 px-4 font-medium">كود الصنف</th>
-                <th className="py-3 px-4 font-medium">الباركود / الموديل</th>
-                <th className="py-3 px-4 font-medium font-sans">اسم الصنف</th>
-                <th className="py-3 px-4 font-medium font-sans">الماركة</th>
-                <th className="py-3 px-4 font-medium font-sans">التصنيف</th>
-                <th className="py-3 px-4 font-medium">السعر</th>
-                <th className="py-3 px-4 font-medium text-slate-400">إجمالي المخزون</th>
-                <th className="py-3 px-4 font-medium text-center">إجراءات</th>
+                <th className="py-3 px-3 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={isAllCurrentPageSelected}
+                    onChange={toggleSelectAllCurrentPage}
+                    className="w-4 h-4 accent-blue-600 rounded cursor-pointer"
+                    title="تحديد كافة أصناف الصفحة الحالية"
+                  />
+                </th>
+                <th className="py-3 px-3 font-semibold">كود الصنف</th>
+                <th className="py-3 px-3 font-semibold">الباركود / الموديل</th>
+                <th className="py-3 px-3 font-semibold font-sans">اسم الصنف</th>
+                <th className="py-3 px-3 font-semibold font-sans">الماركة</th>
+                <th className="py-3 px-3 font-semibold font-sans">التصنيف</th>
+                <th className="py-3 px-3 font-semibold">السعر</th>
+                <th className="py-3 px-3 font-semibold text-slate-600">إجمالي المخزون</th>
+                <th className="py-3 px-3 font-semibold text-center">إجراءات</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.04] font-mono tabular-nums">
-              {paginatedProducts.map((p) => (
-                <tr key={p.itemCode} className="hover:bg-white/[0.02] transition-colors">
-                  <td className="py-3 px-4 text-emerald-400 font-semibold">{p.itemCode}</td>
-                  <td className="py-3 px-4 text-slate-400">{p.barcode || p.modelCode || '—'}</td>
-                  <td className="py-3 px-4 text-white font-sans max-w-xs truncate">{p.name || '—'}</td>
-                  <td className="py-3 px-4 text-slate-400 font-sans">{p.brand || '—'}</td>
-                  <td className="py-3 px-4 text-slate-500 font-sans">{p.category || '—'}</td>
-                  <td className="py-3 px-4 text-emerald-400 font-semibold">{p.salePrice !== null ? `${p.salePrice} ج.م` : '—'}</td>
-                  <td className="py-3 px-4 text-white font-semibold">{p.totalStock.toLocaleString()}</td>
-                  <td className="py-3 px-4 text-center">
-                    <button
-                      onClick={() => setSelectedProduct(p)}
-                      className="px-2.5 py-1 bg-[#131B26] hover:bg-[#1A2534] border border-white/[0.06] text-slate-200 rounded-md text-[11px] font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Eye className="w-3 h-3 text-emerald-400" />
-                      <span>التفاصيل</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
+            <tbody className="divide-y divide-slate-100 font-mono tabular-nums">
+              {paginatedProducts.map((p) => {
+                const isChecked = selectedItemCodes.has(p.itemCode);
+                return (
+                  <tr key={p.itemCode} className={`hover:bg-slate-50/80 transition-colors ${isChecked ? 'bg-blue-50/30' : ''}`}>
+                    <td className="py-3 px-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => toggleSelectProduct(p.itemCode)}
+                        className="w-4 h-4 accent-blue-600 rounded cursor-pointer"
+                      />
+                    </td>
+                    <td className="py-3 px-3 text-blue-600 font-bold">{p.itemCode}</td>
+                    <td className="py-3 px-3 text-slate-600">{p.barcode || p.modelCode || '—'}</td>
+                    <td className="py-3 px-3 text-slate-900 font-sans max-w-xs truncate font-medium">{p.name || '—'}</td>
+                    <td className="py-3 px-3 text-slate-600 font-sans">{p.brand || '—'}</td>
+                    <td className="py-3 px-3 text-slate-500 font-sans">{p.category || '—'}</td>
+                    <td className="py-3 px-3 text-slate-900 font-bold">{p.salePrice !== null ? `${p.salePrice} ج.م` : '—'}</td>
+                    <td className="py-3 px-3 text-slate-900 font-bold">{p.totalStock.toLocaleString()}</td>
+                    <td className="py-3 px-3 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => openPrintModalForProducts([p])}
+                          className="px-2.5 py-1 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 text-slate-700 hover:text-emerald-700 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                          title="طباعة باركود الصنف"
+                        >
+                          <Printer className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>طباعة</span>
+                        </button>
+                        <button
+                          onClick={() => setSelectedProduct(p)}
+                          className="px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-[11px] font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-blue-600" />
+                          <span>التفاصيل</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {paginatedProducts.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500 font-sans">
+                  <td colSpan={9} className="py-12 text-center text-slate-500 font-sans">
                     لا توجد أصناف مطابقة للبحث.
                   </td>
                 </tr>
@@ -306,22 +398,22 @@ export default function ProductsBarcodeView() {
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="py-3 px-4 bg-[#0B1017] border-t border-white/[0.08] flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-500">
+          <div className="py-3.5 px-5 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs font-mono">
+            <span className="text-slate-600 font-medium">
               صفحة {currentPage} من {totalPages}
             </span>
-            <div className="flex gap-1.5">
+            <div className="flex gap-2">
               <button
                 onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1 bg-[#131B26] hover:bg-[#1A2534] border border-white/[0.06] disabled:opacity-30 text-slate-300 rounded cursor-pointer disabled:cursor-not-allowed"
+                className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 disabled:opacity-40 text-slate-700 rounded-lg cursor-pointer disabled:cursor-not-allowed font-medium shadow-2xs"
               >
                 السابق
               </button>
               <button
                 onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 bg-[#131B26] hover:bg-[#1A2534] border border-white/[0.06] disabled:opacity-30 text-slate-300 rounded cursor-pointer disabled:cursor-not-allowed"
+                className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 disabled:opacity-40 text-slate-700 rounded-lg cursor-pointer disabled:cursor-not-allowed font-medium shadow-2xs"
               >
                 التالي
               </button>
@@ -332,65 +424,77 @@ export default function ProductsBarcodeView() {
 
       {/* Product Details Modal */}
       {selectedProduct && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#111823] border border-white/[0.1] rounded-xl max-w-xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto dir-rtl font-sans">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto dir-rtl font-sans">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3.5">
               <div>
-                <span className="text-xs text-emerald-400 font-mono font-bold block">{selectedProduct.itemCode}</span>
-                <h3 className="text-base font-bold text-white mt-0.5">{selectedProduct.name || 'بدون اسم صنف'}</h3>
+                <span className="text-xs text-blue-600 font-mono font-bold block">{selectedProduct.itemCode}</span>
+                <h3 className="text-base font-bold text-slate-900 mt-0.5">{selectedProduct.name || 'بدون اسم صنف'}</h3>
               </div>
               <button
                 onClick={() => setSelectedProduct(null)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/[0.04]"
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 font-mono text-xs tabular-nums">
-              <div className="bg-[#0B1017] p-3 rounded-lg border border-white/[0.06]">
-                <span className="text-slate-500 block mb-1 text-[11px]">الباركود</span>
-                <span className="text-white font-bold">{selectedProduct.barcode || '—'}</span>
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block mb-1 text-[11px] font-medium font-sans">الباركود</span>
+                <span className="text-slate-900 font-bold">{selectedProduct.barcode || '—'}</span>
               </div>
-              <div className="bg-[#0B1017] p-3 rounded-lg border border-white/[0.06]">
-                <span className="text-slate-500 block mb-1 text-[11px]">كود الموديل</span>
-                <span className="text-white font-bold">{selectedProduct.modelCode || '—'}</span>
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block mb-1 text-[11px] font-medium font-sans">كود الموديل</span>
+                <span className="text-slate-900 font-bold">{selectedProduct.modelCode || '—'}</span>
               </div>
-              <div className="bg-[#0B1017] p-3 rounded-lg border border-white/[0.06]">
-                <span className="text-slate-500 block mb-1 text-[11px]">الماركة</span>
-                <span className="text-white font-bold font-sans">{selectedProduct.brand || '—'}</span>
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block mb-1 text-[11px] font-medium font-sans">الماركة</span>
+                <span className="text-slate-900 font-bold font-sans">{selectedProduct.brand || '—'}</span>
               </div>
-              <div className="bg-[#0B1017] p-3 rounded-lg border border-white/[0.06]">
-                <span className="text-slate-500 block mb-1 text-[11px]">التصنيف</span>
-                <span className="text-white font-bold font-sans">{selectedProduct.category || '—'}</span>
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block mb-1 text-[11px] font-medium font-sans">التصنيف</span>
+                <span className="text-slate-900 font-bold font-sans">{selectedProduct.category || '—'}</span>
               </div>
-              <div className="bg-[#0B1017] p-3 rounded-lg border border-white/[0.06]">
-                <span className="text-slate-500 block mb-1 text-[11px]">سعر البيع (Rev {currentRevision})</span>
-                <span className="text-emerald-400 font-bold">{selectedProduct.salePrice !== null ? `${selectedProduct.salePrice} ج.م` : '—'}</span>
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block mb-1 text-[11px] font-medium font-sans">سعر البيع</span>
+                <span className="text-slate-900 font-bold">{selectedProduct.salePrice !== null ? `${selectedProduct.salePrice} ج.م` : '—'}</span>
               </div>
-              <div className="bg-[#0B1017] p-3 rounded-lg border border-white/[0.06]">
-                <span className="text-slate-500 block mb-1 text-[11px]">إجمالي المخزون</span>
-                <span className="text-white font-bold">{selectedProduct.totalStock}</span>
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="text-slate-500 block mb-1 text-[11px] font-medium font-sans">إجمالي المخزون</span>
+                <span className="text-slate-900 font-bold">{selectedProduct.totalStock}</span>
               </div>
             </div>
 
             {/* Stocks Breakdown */}
             <div className="space-y-2.5">
-              <h4 className="text-white font-semibold text-xs">أرصدة المخزون حسب الفروع والمواقع التشغيلية:</h4>
-              <div className="bg-[#0B1017] rounded-lg border border-white/[0.06] divide-y divide-white/[0.04] font-mono text-xs max-h-48 overflow-y-auto">
+              <h4 className="text-slate-900 font-bold text-xs">أرصدة المخزون حسب الفروع والمواقع التشغيلية:</h4>
+              <div className="bg-slate-50 rounded-xl border border-slate-200 divide-y divide-slate-200 font-mono text-xs max-h-48 overflow-y-auto">
                 {selectedProduct.stocks && Object.entries(selectedProduct.stocks).map(([locId, qty]) => (
-                  <div key={locId} className="p-2.5 flex items-center justify-between">
-                    <span className="text-slate-300 font-semibold">{locId}</span>
-                    <span className="text-emerald-400 font-bold tabular-nums">{qty} وحدة</span>
+                  <div key={locId} className="p-3 flex items-center justify-between">
+                    <span className="text-slate-700 font-semibold">{locId}</span>
+                    <span className="text-emerald-700 font-bold tabular-nums">{qty} وحدة</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-2 flex items-center justify-between border-t border-slate-200">
+              <button
+                onClick={() => {
+                  const prod = selectedProduct;
+                  setSelectedProduct(null);
+                  openPrintModalForProducts([prod]);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs transition-colors"
+              >
+                <Printer className="w-4 h-4" />
+                <span>طباعة باركود الصنف</span>
+              </button>
+
               <button
                 onClick={() => setSelectedProduct(null)}
-                className="px-4 py-2 bg-white/[0.08] hover:bg-white/[0.12] text-white rounded-lg text-xs font-medium cursor-pointer"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
               >
                 إغلاق
               </button>
@@ -401,22 +505,23 @@ export default function ProductsBarcodeView() {
 
       {/* Camera Barcode Scanner Modal */}
       {showCameraModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#111823] border border-white/[0.1] rounded-xl max-w-sm w-full p-6 shadow-2xl space-y-4 dir-rtl font-sans text-center">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-              <h3 className="text-white font-semibold text-xs flex items-center gap-2">
-                <Scan className="w-4 h-4 text-emerald-400" />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 dir-rtl font-sans text-center">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <h3 className="text-slate-900 font-bold text-xs flex items-center gap-2">
+                <Scan className="w-4 h-4 text-blue-600" />
                 <span>مسح باركود بالكاميرا</span>
               </h3>
               <button
                 onClick={() => setShowCameraModal(false)}
-                className="p-1 text-slate-400 hover:text-white rounded"
+                className="p-1 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-4 bg-[#0B1017] border border-white/[0.12] rounded-lg space-y-3">
+            {/* Camera Viewport Area — preserved dark for video feed */}
+            <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-3">
               <BarcodeScanner
                 onScanSuccess={(decodedText) => {
                   setCameraInput(decodedText);
@@ -433,14 +538,14 @@ export default function ProductsBarcodeView() {
                 placeholder="أدخل الباركود يدوياً"
                 value={cameraInput}
                 onChange={(e) => setCameraInput(e.target.value)}
-                className="w-full bg-[#111823] border border-white/[0.1] rounded-lg px-3 py-2 text-white text-xs font-mono text-center"
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs font-mono text-center placeholder-slate-500 focus:outline-none focus:border-blue-500"
               />
             </div>
 
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowCameraModal(false)}
-                className="px-3 py-1.5 bg-white/[0.06] text-slate-400 rounded-lg text-xs cursor-pointer"
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
               >
                 إلغاء
               </button>
@@ -452,13 +557,25 @@ export default function ProductsBarcodeView() {
                     setCameraInput('');
                   }
                 }}
-                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium cursor-pointer"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold cursor-pointer transition-colors shadow-xs"
               >
                 بحث بالباركود
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Barcode Label Printing Modal */}
+      {showLabelModal && (
+        <BarcodeLabelModal
+          products={productsToPrint}
+          isOpen={showLabelModal}
+          onClose={() => {
+            setShowLabelModal(false);
+            setProductsToPrint([]);
+          }}
+        />
       )}
     </div>
   );

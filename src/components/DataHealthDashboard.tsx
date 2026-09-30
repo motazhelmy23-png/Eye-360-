@@ -98,13 +98,13 @@ export default function DataHealthDashboard() {
   return (
     <div className="space-y-6">
       {/* Header Bar */}
-      <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <Activity className="w-5 h-5 text-emerald-400" />
-            <h2 className="text-base font-bold text-white">سلامة البيانات والتحقق السحابي</h2>
+            <Activity className="w-5 h-5 text-[#10B981]" />
+            <h2 className="text-base font-bold text-[#0F172A]">سلامة البيانات والتحقق السحابي</h2>
           </div>
-          <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+          <p className="text-xs text-[#64748B] mt-1 leading-relaxed">
             متابعة حالة الكتالوج النشط، التحقق من أجزاء البيانات (Chunks)، ومطابقة النسخة المحلية (IndexedDB).
           </p>
         </div>
@@ -113,15 +113,15 @@ export default function DataHealthDashboard() {
           <button
             onClick={refreshAllStates}
             disabled={loadingQuick}
-            className="px-3 py-2 bg-[#131B26] hover:bg-[#1A2534] border border-white/[0.08] text-slate-200 rounded-lg text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+            className="px-3.5 py-2 bg-[#FFFFFF] hover:bg-[#F8FAFC] border border-[#E2E8F0] text-[#334155] rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-slate-400 ${loadingQuick ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-[#64748B] ${loadingQuick ? 'animate-spin' : ''}`} />
             <span>تحديث الحالة</span>
           </button>
           <button
             onClick={handleFullCheck}
             disabled={loadingFull}
-            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
+            className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
           >
             <Cpu className={`w-3.5 h-3.5 ${loadingFull ? 'animate-spin' : ''}`} />
             <span>فحص سحابي كامل</span>
@@ -130,67 +130,67 @@ export default function DataHealthDashboard() {
       </div>
 
       {message && (
-        <div className={`p-3.5 rounded-lg text-xs flex items-center gap-2.5 border ${
+        <div className={`p-3.5 rounded-xl text-xs flex items-center gap-2.5 border ${
           message.includes('بنجاح') 
-            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300' 
-            : 'bg-[#111823] border-white/[0.08] text-slate-200'
+            ? 'bg-[#ECFDF5] border-[#A7F3D0] text-[#047857]' 
+            : 'bg-[#FEF2F2] border-[#FECACA] text-[#B91C1C]'
         }`}>
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <CheckCircle2 className="w-4 h-4 text-[#10B981] shrink-0" />
           <span>{message}</span>
         </div>
       )}
 
       {/* Metrics Row: 4 Clean Surfaces */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-5 space-y-2">
-          <span className="text-slate-400 text-xs block">الاتصال السحابي</span>
-          <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
-            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+        <div className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl p-5 space-y-2 shadow-xs">
+          <span className="text-[#64748B] text-xs font-medium block">الاتصال السحابي</span>
+          <div className="flex items-center gap-2 text-[#10B981] font-bold text-sm">
+            <span className="w-2 h-2 rounded-full bg-[#10B981]"></span>
             <span>السحابة متصلة وجاهزة</span>
           </div>
         </div>
 
-        <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-5 space-y-2">
-          <span className="text-slate-400 text-xs block">حالة الكتالوج النشط</span>
+        <div className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl p-5 space-y-2 shadow-xs">
+          <span className="text-[#64748B] text-xs font-medium block">حالة الكتالوج النشط</span>
           <div className="flex items-center gap-2">
             {quickHealth?.healthy ? (
-              <span className="text-emerald-400 font-semibold text-sm flex items-center gap-1.5 font-mono">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span className="text-[#10B981] font-bold text-sm flex items-center gap-1.5 font-mono">
+                <CheckCircle2 className="w-4 h-4 text-[#10B981]" />
                 <span>سليم ومعتمد (17/17)</span>
               </span>
             ) : (
-              <span className="text-amber-400 font-semibold text-sm flex items-center gap-1.5 font-mono">
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <span className="text-[#F59E0B] font-bold text-sm flex items-center gap-1.5 font-mono">
+                <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />
                 <span>يحتاج مراجعة</span>
               </span>
             )}
           </div>
         </div>
 
-        <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-5 space-y-2">
-          <span className="text-slate-400 text-xs block">معرف الكتالوج النشط</span>
-          <span className="text-white font-mono text-xs font-semibold block truncate">
+        <div className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl p-5 space-y-2 shadow-xs">
+          <span className="text-[#64748B] text-xs font-medium block">معرف الكتالوج النشط</span>
+          <span className="text-[#0F172A] font-mono text-xs font-semibold block truncate">
             {quickHealth?.activeCatalogVersionId || '---'}
           </span>
         </div>
 
-        <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-5 space-y-2">
-          <span className="text-slate-400 text-xs block">مراجعة المخزون (Revision)</span>
-          <span className="text-emerald-400 font-mono text-base font-bold block tabular-nums">
+        <div className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl p-5 space-y-2 shadow-xs">
+          <span className="text-[#64748B] text-xs font-medium block">مراجعة المخزون (Revision)</span>
+          <span className="text-[#2563EB] font-mono text-base font-bold block tabular-nums">
             Rev {quickHealth?.activeInventoryRevision ?? 0}
           </span>
         </div>
       </div>
 
       {/* Local IndexedDB Cache Section */}
-      <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-6 space-y-4 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
+      <div className="bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl p-6 space-y-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E2E8F0] pb-4">
           <div>
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <HardDrive className="w-4 h-4 text-blue-400" />
+            <h3 className="text-sm font-bold text-[#0F172A] flex items-center gap-2">
+              <HardDrive className="w-4 h-4 text-[#2563EB]" />
               <span>قاعدة البيانات المحلية (IndexedDB Cache)</span>
             </h3>
-            <p className="text-slate-400 text-xs mt-0.5">
+            <p className="text-[#64748B] text-xs mt-0.5">
               {isLocalAlreadySynced && !forceAdvancedRebuild
                 ? 'النسخة المحلية محدثة ومتطابقة تماماً مع السحابة، والبحث المباشر جاهز فورياً.'
                 : 'تنزيل ومزامنة الكتالوج المعتمد محلياً للعمل السريع والبحث بالباركود دون انتظار.'}
@@ -200,13 +200,13 @@ export default function DataHealthDashboard() {
           <div className="flex items-center gap-2 shrink-0">
             {isLocalAlreadySynced && !forceAdvancedRebuild ? (
               <div className="flex items-center gap-2">
-                <span className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+                <span className="px-3 py-1.5 bg-[#ECFDF5] border border-[#A7F3D0] text-[#047857] rounded-xl text-xs font-semibold flex items-center gap-1.5">
                   <CheckCheck className="w-3.5 h-3.5" />
                   <span>متطابقة ومحدثة</span>
                 </span>
                 <button
                   onClick={() => setForceAdvancedRebuild(true)}
-                  className="px-3 py-1.5 bg-[#131B26] hover:bg-[#1A2534] border border-white/[0.08] text-slate-300 rounded-lg text-xs font-medium cursor-pointer"
+                  className="px-3 py-1.5 bg-[#FFFFFF] hover:bg-[#F8FAFC] border border-[#E2E8F0] text-[#334155] rounded-xl text-xs font-semibold cursor-pointer shadow-xs"
                 >
                   إعادة بناء
                 </button>
@@ -215,7 +215,7 @@ export default function DataHealthDashboard() {
               <button
                 onClick={() => handleRebuildLocal(true)}
                 disabled={rebuilding}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-sm"
+                className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shadow-sm"
               >
                 <HardDrive className={`w-3.5 h-3.5 ${rebuilding ? 'animate-spin' : ''}`} />
                 <span>{rebuilding ? 'جاري إعادة البناء...' : 'إعادة بناء النسخة المحلية'}</span>
@@ -226,35 +226,35 @@ export default function DataHealthDashboard() {
 
         {/* Progress Bar for Rebuild */}
         {rebuilding && (
-          <div className="bg-[#0B1017] p-3.5 rounded-lg border border-white/[0.08] space-y-2">
+          <div className="bg-[#F8FAFC] p-3.5 rounded-xl border border-[#E2E8F0] space-y-2">
             <div className="flex justify-between text-xs font-mono">
-              <span className="text-blue-400">{progressMessage || 'جاري المعالجة...'}</span>
-              <span className="text-slate-400">{progressPercent}%</span>
+              <span className="text-[#2563EB] font-semibold">{progressMessage || 'جاري المعالجة...'}</span>
+              <span className="text-[#64748B]">{progressPercent}%</span>
             </div>
-            <div className="w-full bg-[#131B26] h-1.5 rounded-full overflow-hidden">
-              <div className="bg-blue-500 h-full transition-all duration-300" style={{ width: `${progressPercent}%` }} />
+            <div className="w-full bg-[#E2E8F0] h-1.5 rounded-full overflow-hidden">
+              <div className="bg-[#2563EB] h-full transition-all duration-300" style={{ width: `${progressPercent}%` }} />
             </div>
           </div>
         )}
 
         {/* Local State Metadata Strip */}
         {localState && localState.isHealthy && (
-          <div className="bg-[#0B1017] p-4 rounded-lg border border-white/[0.06] grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono tabular-nums">
+          <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0] grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono tabular-nums">
             <div>
-              <span className="text-slate-500 block mb-0.5 text-[11px]">الأصناف المحلية</span>
-              <span className="text-white font-bold">{localState.localProductCount.toLocaleString()} صنف</span>
+              <span className="text-[#64748B] block mb-0.5 text-[11px]">الأصناف المحلية</span>
+              <span className="text-[#0F172A] font-bold">{localState.localProductCount.toLocaleString()} صنف</span>
             </div>
             <div>
-              <span className="text-slate-500 block mb-0.5 text-[11px]">مراجعة المخزون</span>
-              <span className="text-emerald-400 font-bold">Rev {localState.localInventoryRevision}</span>
+              <span className="text-[#64748B] block mb-0.5 text-[11px]">مراجعة المخزون</span>
+              <span className="text-[#2563EB] font-bold">Rev {localState.localInventoryRevision}</span>
             </div>
             <div>
-              <span className="text-slate-500 block mb-0.5 text-[11px]">بصمة Checksum</span>
-              <span className="text-blue-400 font-bold">مطابقة 100%</span>
+              <span className="text-[#64748B] block mb-0.5 text-[11px]">بصمة Checksum</span>
+              <span className="text-[#10B981] font-bold">مطابقة 100%</span>
             </div>
             <div>
-              <span className="text-slate-500 block mb-0.5 text-[11px]">آخر مزامنة ناجحة</span>
-              <span className="text-slate-300">{localState.lastSyncedAt ? new Date(localState.lastSyncedAt).toLocaleTimeString('ar-EG') : '---'}</span>
+              <span className="text-[#64748B] block mb-0.5 text-[11px]">آخر مزامنة ناجحة</span>
+              <span className="text-[#334155]">{localState.lastSyncedAt ? new Date(localState.lastSyncedAt).toLocaleTimeString('ar-EG') : '---'}</span>
             </div>
           </div>
         )}
@@ -263,38 +263,38 @@ export default function DataHealthDashboard() {
         <div className="pt-2">
           <button
             onClick={() => setShowDiagnostics(!showDiagnostics)}
-            className="text-slate-400 hover:text-white text-xs flex items-center gap-2 font-mono cursor-pointer"
+            className="text-[#64748B] hover:text-[#0F172A] text-xs flex items-center gap-2 font-mono cursor-pointer transition-colors"
           >
-            <Terminal className="w-3.5 h-3.5 text-emerald-400" />
-            <span>بيانات التشخيص الفني لقاعدة البيانات المحلية</span>
+            <Terminal className="w-3.5 h-3.5 text-[#10B981]" />
+            <span className="font-sans font-semibold">بيانات التشخيص الفني لقاعدة البيانات المحلية</span>
             {showDiagnostics ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
 
           {showDiagnostics && diagnostics && (
-            <div className="mt-3 bg-[#0B1017] p-4 rounded-lg border border-white/[0.06] font-mono text-xs text-slate-300 space-y-1.5 tabular-nums">
-              <div className="flex justify-between py-1 border-b border-white/[0.04]">
-                <span className="text-slate-500">Database Name</span>
-                <span>{diagnostics.databaseName}</span>
+            <div className="mt-3 bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0] font-mono text-xs text-[#334155] space-y-1.5 tabular-nums">
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-[#64748B]">Database Name</span>
+                <span className="font-semibold text-[#0F172A]">{diagnostics.databaseName}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-white/[0.04]">
-                <span className="text-slate-500">Schema Version</span>
-                <span>{diagnostics.schemaVersion}</span>
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-[#64748B]">Schema Version</span>
+                <span className="font-semibold text-[#0F172A]">{diagnostics.schemaVersion}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-white/[0.04]">
-                <span className="text-slate-500">Product Store Count</span>
-                <span className="text-white font-bold">{diagnostics.productStoreCount.toLocaleString()}</span>
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-[#64748B]">Product Store Count</span>
+                <span className="text-[#0F172A] font-bold">{diagnostics.productStoreCount.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-white/[0.04]">
-                <span className="text-slate-500">Barcode Index Count</span>
-                <span className="text-white font-bold">{diagnostics.barcodeIndexCount.toLocaleString()}</span>
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-[#64748B]">Barcode Index Count</span>
+                <span className="text-[#0F172A] font-bold">{diagnostics.barcodeIndexCount.toLocaleString()}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-white/[0.04]">
-                <span className="text-slate-500">Active Version ID</span>
-                <span className="text-emerald-400 font-semibold">{diagnostics.activeCatalogVersionId}</span>
+              <div className="flex justify-between py-1 border-b border-[#E2E8F0]">
+                <span className="text-[#64748B]">Active Version ID</span>
+                <span className="text-[#2563EB] font-semibold">{diagnostics.activeCatalogVersionId}</span>
               </div>
               <div className="flex justify-between py-1">
-                <span className="text-slate-500">Last Synced At</span>
-                <span className="text-slate-400">{diagnostics.lastSyncedAt}</span>
+                <span className="text-[#64748B]">Last Synced At</span>
+                <span className="text-[#64748B]">{diagnostics.lastSyncedAt}</span>
               </div>
             </div>
           )}

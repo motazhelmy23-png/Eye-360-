@@ -106,11 +106,11 @@ export default function BranchManagementView() {
 
   if (loading) {
     return (
-      <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-16 text-center space-y-3">
-        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mx-auto">
+      <div className="bg-white border border-slate-200 rounded-2xl p-16 text-center space-y-3 shadow-xs">
+        <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mx-auto">
           <Store className="w-5 h-5 animate-pulse" />
         </div>
-        <p className="text-slate-400 text-xs">جاري تحميل الفروع ومواقع الكتالوج النشط...</p>
+        <p className="text-slate-500 text-xs font-medium">جاري تحميل الفروع ومواقع الكتالوج النشط...</p>
       </div>
     );
   }
@@ -118,20 +118,20 @@ export default function BranchManagementView() {
   return (
     <div className="space-y-6">
       {/* Top Header Card */}
-      <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <Store className="w-5 h-5 text-emerald-400" />
-            <h2 className="text-base font-bold text-white">إدارة الفروع والمواقع التشغيلية</h2>
+            <Store className="w-5 h-5 text-blue-600" />
+            <h2 className="text-base font-bold text-slate-900">إدارة الفروع والمواقع التشغيلية</h2>
           </div>
-          <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
             ربط الفروع التجارية بمواقع المخزون المستخرجة ديناميكياً من الكتالوج النشط ({activeLocations.length} موقع متوفر).
           </p>
         </div>
 
         <button
           onClick={handleOpenCreate}
-          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shrink-0 shadow-sm"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shrink-0 shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>إضافة فرع جديد</span>
@@ -146,26 +146,26 @@ export default function BranchManagementView() {
           return (
             <div 
               key={b.branchId} 
-              className={`bg-[#111823] border rounded-xl p-5 space-y-4 shadow-xl flex flex-col justify-between ${
-                !isLocValid ? 'border-amber-500/40 bg-amber-500/[0.02]' : 'border-white/[0.08]'
+              className={`bg-white border rounded-2xl p-5 space-y-4 shadow-xs flex flex-col justify-between transition-all ${
+                !isLocValid ? 'border-amber-300 bg-amber-50/20' : 'border-slate-200'
               }`}
             >
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className="text-[11px] text-emerald-400 font-mono font-bold block">{b.branchId}</span>
-                    <h3 className="text-white font-bold text-sm mt-0.5">{b.name}</h3>
+                    <span className="text-[11px] text-blue-600 font-mono font-bold block">{b.branchId}</span>
+                    <h3 className="text-slate-900 font-bold text-sm mt-0.5">{b.name}</h3>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <span className={`text-[11px] px-2 py-0.5 rounded font-mono font-semibold ${
+                    <span className={`text-[11px] px-2 py-0.5 rounded-lg font-mono font-semibold ${
                       b.isActive 
-                        ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' 
-                        : 'bg-red-500/10 text-red-300 border border-red-500/20'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                        : 'bg-red-50 text-red-800 border border-red-200'
                     }`}>
                       {b.isActive ? 'نشط' : 'معطل'}
                     </span>
                     {!isLocValid && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded font-mono font-bold bg-amber-100 text-amber-800 border border-amber-300">
                         NEEDS_REVIEW
                       </span>
                     )}
@@ -173,42 +173,42 @@ export default function BranchManagementView() {
                 </div>
 
                 {!isLocValid && (
-                  <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-300 text-[11px] flex items-center gap-2">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                    <span>موقع المخزون غير موجود في الكتالوج النشط</span>
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px] flex items-center gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                    <span className="font-medium">موقع المخزون غير موجود في الكتالوج النشط</span>
                   </div>
                 )}
 
-                <div className="space-y-1.5 text-xs font-mono text-slate-300 bg-[#0B1017] p-3 rounded-lg border border-white/[0.06] tabular-nums">
-                  <div className="flex justify-between py-0.5 border-b border-white/[0.04]">
-                    <span className="text-slate-500">كود الفرع:</span>
-                    <span className="text-white font-bold">{b.code}</span>
+                <div className="space-y-1.5 text-xs font-mono text-slate-700 bg-slate-50 p-3.5 rounded-xl border border-slate-200 tabular-nums">
+                  <div className="flex justify-between py-1 border-b border-slate-200">
+                    <span className="text-slate-500 font-sans">كود الفرع:</span>
+                    <span className="text-slate-900 font-bold">{b.code}</span>
                   </div>
-                  <div className="flex justify-between py-0.5 border-b border-white/[0.04] truncate">
-                    <span className="text-slate-500 shrink-0">موقع المخزون:</span>
-                    <span className="text-emerald-400 font-semibold truncate mr-2" title={b.inventoryLocationId}>
+                  <div className="flex justify-between py-1 border-b border-slate-200 truncate">
+                    <span className="text-slate-500 font-sans shrink-0">موقع المخزون:</span>
+                    <span className="text-blue-600 font-bold truncate mr-2" title={b.inventoryLocationId}>
                       {formatLocationDisplayName(b.inventoryLocationId)}
                     </span>
                   </div>
-                  <div className="flex justify-between py-0.5 border-b border-white/[0.04]">
-                    <span className="text-slate-500">الحسابات المرتبطة:</span>
-                    <span className="text-white">{accCount} موظف</span>
+                  <div className="flex justify-between py-1 border-b border-slate-200">
+                    <span className="text-slate-500 font-sans">الحسابات المرتبطة:</span>
+                    <span className="text-slate-900 font-medium">{accCount} موظف</span>
                   </div>
-                  <div className="flex justify-between py-0.5">
-                    <span className="text-slate-500">رؤية فروع أخرى:</span>
-                    <span className={b.allowCrossBranchStockView ? 'text-emerald-400' : 'text-slate-500'}>
+                  <div className="flex justify-between py-1">
+                    <span className="text-slate-500 font-sans">رؤية فروع أخرى:</span>
+                    <span className={b.allowCrossBranchStockView ? 'text-emerald-700 font-semibold' : 'text-slate-500'}>
                       {b.allowCrossBranchStockView ? 'مسموح' : 'محظور'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="pt-2 flex justify-end border-t border-white/[0.04]">
+              <div className="pt-2 flex justify-end border-t border-slate-100">
                 <button
                   onClick={() => handleOpenEdit(b)}
-                  className="px-3 py-1.5 bg-[#131B26] hover:bg-[#1A2534] border border-white/[0.08] text-slate-200 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                 >
-                  <Edit className="w-3.5 h-3.5 text-emerald-400" />
+                  <Edit className="w-3.5 h-3.5 text-blue-600" />
                   <span>تعديل الفرع</span>
                 </button>
               </div>
@@ -216,7 +216,7 @@ export default function BranchManagementView() {
           );
         })}
         {branches.length === 0 && (
-          <div className="col-span-full bg-[#111823] border border-white/[0.08] rounded-xl p-12 text-center text-slate-500 text-xs">
+          <div className="col-span-full bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-500 text-xs shadow-xs">
             لا توجد فروع مسجلة حتى الآن.
           </div>
         )}
@@ -224,107 +224,107 @@ export default function BranchManagementView() {
 
       {/* Create / Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#111823] border border-white/[0.1] rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-5 dir-rtl font-sans">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-              <h3 className="text-base font-bold text-white">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 dir-rtl font-sans">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3.5">
+              <h3 className="text-base font-bold text-slate-900">
                 {editingBranch ? 'تعديل بيانات الفرع' : 'إضافة فرع تجاري جديد'}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/[0.04]"
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {errorMsg && (
-              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-300 text-xs flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />
-                <span>{errorMsg}</span>
+              <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs flex items-center gap-2.5 shadow-xs">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+                <span className="font-medium">{errorMsg}</span>
               </div>
             )}
 
             <form onSubmit={handleSave} className="space-y-4 text-xs font-sans">
               <div>
-                <label className="block text-slate-300 mb-1 font-medium">معرف الفرع (Branch ID - بالإنجليزية دون مسافات)</label>
+                <label className="block text-slate-700 mb-1 font-semibold">معرف الفرع (Branch ID - بالإنجليزية دون مسافات)</label>
                 <input
                   type="text"
                   required
                   disabled={Boolean(editingBranch)}
                   value={branchIdInput}
                   onChange={(e) => setBranchIdInput(e.target.value)}
-                  className="w-full bg-[#0B1017] border border-white/[0.1] rounded-lg px-3.5 py-2 text-white font-mono disabled:opacity-40 focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 font-mono disabled:opacity-50 focus:outline-none focus:border-blue-600"
                   placeholder="auc"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1 font-medium">اسم الفرع بالعربية</label>
+                <label className="block text-slate-700 mb-1 font-semibold">اسم الفرع بالعربية</label>
                 <input
                   type="text"
                   required
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
-                  className="w-full bg-[#0B1017] border border-white/[0.1] rounded-lg px-3.5 py-2 text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:border-blue-600"
                   placeholder="التجمع الخامس AUC"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1 font-medium">كود الفرع المختصر</label>
+                <label className="block text-slate-700 mb-1 font-semibold">كود الفرع المختصر</label>
                 <input
                   type="text"
                   required
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value)}
-                  className="w-full bg-[#0B1017] border border-white/[0.1] rounded-lg px-3.5 py-2 text-white font-mono uppercase focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 font-mono uppercase focus:outline-none focus:border-blue-600"
                   placeholder="AUC"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1 font-medium">موقع المخزون التشغيلي (ديناميكياً من الكتالوج النشط)</label>
+                <label className="block text-slate-700 mb-1 font-semibold">موقع المخزون التشغيلي (ديناميكياً من الكتالوج النشط)</label>
                 <select
                   value={locationIdInput}
                   onChange={(e) => setLocationIdInput(e.target.value)}
-                  className="w-full bg-[#0B1017] border border-white/[0.1] rounded-lg px-3.5 py-2 text-white font-mono focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 font-mono focus:outline-none focus:border-blue-600"
                   required
                 >
                   {activeLocations.map(loc => (
-                    <option key={loc.id} value={loc.id} className="bg-[#111823] text-white">
+                    <option key={loc.id} value={loc.id} className="bg-white text-slate-900">
                       {loc.name} ({loc.id})
                     </option>
                   ))}
                   {activeLocations.length === 0 && (
-                    <option value="" className="bg-[#111823] text-slate-400">لا توجد مواقع مخزون متاحة في الكتالوج</option>
+                    <option value="" className="bg-white text-slate-400">لا توجد مواقع مخزون متاحة في الكتالوج</option>
                   )}
                 </select>
               </div>
 
-              <div className="flex items-center justify-between bg-[#0B1017] p-3 rounded-lg border border-white/[0.06]">
+              <div className="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                 <div>
-                  <span className="text-white font-medium block">حالة الفرع</span>
+                  <span className="text-slate-900 font-bold block">حالة الفرع</span>
                   <span className="text-slate-500 text-[11px]">تعطيل الفرع يحظر تسجيل دخول موظفيه فورياً.</span>
                 </div>
                 <input
                   type="checkbox"
                   checked={isActiveInput}
                   onChange={(e) => setIsActiveInput(e.target.checked)}
-                  className="w-4 h-4 accent-emerald-500 cursor-pointer"
+                  className="w-4 h-4 accent-blue-600 cursor-pointer"
                 />
               </div>
 
-              <div className="flex items-center justify-between bg-[#0B1017] p-3 rounded-lg border border-white/[0.06]">
+              <div className="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                 <div>
-                  <span className="text-white font-medium block">عرض أرصدة الفروع الأخرى (Cross-Branch View)</span>
+                  <span className="text-slate-900 font-bold block">عرض أرصدة الفروع الأخرى (Cross-Branch View)</span>
                   <span className="text-slate-500 text-[11px]">السماح لموظفي هذا الفرع بالاطلاع على كميات الفروع الأخرى (للقراءة فقط).</span>
                 </div>
                 <input
                   type="checkbox"
                   checked={allowCrossViewInput}
                   onChange={(e) => setAllowCrossViewInput(e.target.checked)}
-                  className="w-4 h-4 accent-emerald-500 cursor-pointer"
+                  className="w-4 h-4 accent-blue-600 cursor-pointer"
                 />
               </div>
 
@@ -332,13 +332,13 @@ export default function BranchManagementView() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 rounded-lg text-xs font-medium cursor-pointer"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
                 >
                   إلغاء
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-sm"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold cursor-pointer shadow-sm transition-colors"
                 >
                   حفظ الفرع
                 </button>

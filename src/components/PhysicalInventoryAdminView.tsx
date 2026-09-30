@@ -956,8 +956,8 @@ export default function PhysicalInventoryAdminView({ currentUser }: PhysicalInve
                   </div>
 
                   {/* Admin Diagnostic Box */}
-                  <div className="bg-[#111827] text-slate-300 p-2.5 rounded-lg text-[10px] font-mono space-y-0.5 dir-ltr border border-white/10">
-                    <div className="text-emerald-400 font-bold">ADMIN BRANCH DIAGNOSTICS:</div>
+                  <div className="bg-slate-50 text-slate-600 p-3 rounded-xl text-[11px] font-mono space-y-0.5 dir-ltr border border-slate-200">
+                    <div className="text-emerald-700 font-bold">ADMIN BRANCH DIAGNOSTICS:</div>
                     <div>Total Branches: {branches.length} | Active: {activeBranches.length}</div>
                     <div>With Location ID: {branches.filter(b => b.inventoryLocationId).length} | Valid Mapped: {validMappedBranches.length}</div>
                     <div>Active Catalog Locations: {activeLocations.length}</div>

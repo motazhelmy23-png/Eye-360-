@@ -1,7 +1,10 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { initializeFirestore, memoryLocalCache } from 'firebase/firestore';
+import { initializeFirestore, memoryLocalCache, setLogLevel } from 'firebase/firestore';
 import config from '../../firebase-applet-config.json';
+
+// Suppress benign connection retry / offline notice logs from console
+setLogLevel('silent');
 
 const FORBIDDEN_PROJECT_ID = "radio-talaat-inventory";
 if (config.projectId === FORBIDDEN_PROJECT_ID) {
@@ -20,10 +23,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// Use memoryLocalCache and experimentalAutoDetectLongPolling to prevent backend timeout and disconnection issues in web/iframe networks
+// Use memoryLocalCache and experimentalForceLongPolling to prevent backend timeout and disconnection issues in web/iframe networks
 const db = initializeFirestore(app, {
   localCache: memoryLocalCache(),
-  experimentalAutoDetectLongPolling: true,
+  experimentalForceLongPolling: true,
 }, config.firestoreDatabaseId);
 
 export { app, auth, db };

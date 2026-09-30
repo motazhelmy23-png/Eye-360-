@@ -93,11 +93,11 @@ export default function AccountsManagementView() {
 
   if (loading) {
     return (
-      <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-16 text-center space-y-3">
-        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mx-auto">
+      <div className="bg-white border border-slate-200 rounded-2xl p-16 text-center space-y-3 shadow-xs">
+        <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mx-auto">
           <Users className="w-5 h-5 animate-pulse" />
         </div>
-        <p className="text-slate-400 text-xs">جاري تحميل حسابات المبيعات والصلاحيات...</p>
+        <p className="text-slate-500 text-xs font-medium">جاري تحميل حسابات المبيعات والصلاحيات...</p>
       </div>
     );
   }
@@ -105,20 +105,20 @@ export default function AccountsManagementView() {
   return (
     <div className="space-y-6">
       {/* Top Header Card */}
-      <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <Users className="w-5 h-5 text-emerald-400" />
-            <h2 className="text-base font-bold text-white">الحسابات والصلاحيات التشغيلية</h2>
+            <Users className="w-5 h-5 text-blue-600" />
+            <h2 className="text-base font-bold text-slate-900">الحسابات والصلاحيات التشغيلية</h2>
           </div>
-          <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
             إدارة موظفي المبيعات وربط حساباتهم بالفروع التشغيلية المعتمدة ({accounts.length} حساب مسجل).
           </p>
         </div>
 
         <button
           onClick={handleOpenCreate}
-          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shrink-0 shadow-sm"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer shrink-0 shadow-sm"
         >
           <UserPlus className="w-4 h-4" />
           <span>إضافة حساب مبيعات</span>
@@ -126,59 +126,59 @@ export default function AccountsManagementView() {
       </div>
 
       {/* Info Notice Strip */}
-      <div className="p-3.5 bg-[#111823] border border-white/[0.08] rounded-xl text-xs text-slate-300 flex items-start gap-3">
-        <Lock className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-        <div className="leading-relaxed text-slate-400">
-          <strong className="text-slate-200">آلية إضافة موظف جديد:</strong> يتم إنشاء البريد وكلمة المرور في لوحة Firebase Authentication، ثم يتم إدخال الـ UID الخاص بالحساب هنا لربطه بالفرع وتفعيل صلاحيات المبيعات.
+      <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl text-xs text-blue-900 flex items-start gap-3 shadow-xs">
+        <Lock className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+        <div className="leading-relaxed text-blue-800">
+          <strong className="font-bold text-blue-950">آلية إضافة موظف جديد:</strong> يتم إنشاء البريد وكلمة المرور في لوحة Firebase Authentication، ثم يتم إدخال الـ UID الخاص بالحساب هنا لربطه بالفرع وتفعيل صلاحيات المبيعات.
         </div>
       </div>
 
       {/* Accounts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {accounts.map(acc => (
-          <div key={acc.uid} className="bg-[#111823] border border-white/[0.08] rounded-xl p-5 space-y-4 shadow-xl flex flex-col justify-between">
+          <div key={acc.uid} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-xs flex flex-col justify-between">
             <div className="space-y-3">
               <div className="flex items-start justify-between">
                 <div>
                   <span className="text-[11px] text-slate-500 font-mono block truncate max-w-[180px]">
                     UID: {acc.uid.substring(0, 14)}...
                   </span>
-                  <h3 className="text-white font-bold text-sm mt-0.5">{acc.name}</h3>
+                  <h3 className="text-slate-900 font-bold text-sm mt-0.5">{acc.name}</h3>
                 </div>
-                <span className={`text-[11px] px-2 py-0.5 rounded font-mono font-semibold ${
+                <span className={`text-[11px] px-2 py-0.5 rounded-lg font-mono font-semibold ${
                   acc.isActive 
-                    ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' 
-                    : 'bg-red-500/10 text-red-300 border border-red-500/20'
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                    : 'bg-red-50 text-red-800 border border-red-200'
                 }`}>
                   {acc.isActive ? 'نشط' : 'معطل'}
                 </span>
               </div>
 
-              <div className="space-y-1.5 text-xs font-mono text-slate-300 bg-[#0B1017] p-3 rounded-lg border border-white/[0.06]">
-                <div className="flex justify-between py-0.5 border-b border-white/[0.04]">
-                  <span className="text-slate-500">الصلاحية:</span>
-                  <span className="text-emerald-400 font-semibold uppercase">{acc.role}</span>
+              <div className="space-y-1.5 text-xs font-mono text-slate-700 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <div className="flex justify-between py-1 border-b border-slate-200">
+                  <span className="text-slate-500 font-sans">الصلاحية:</span>
+                  <span className="text-blue-600 font-bold uppercase">{acc.role}</span>
                 </div>
-                <div className="flex justify-between py-0.5 truncate">
-                  <span className="text-slate-500 shrink-0">الفرع المخصص:</span>
-                  <span className="text-white font-semibold truncate mr-2">{getBranchName(acc.branchId)}</span>
+                <div className="flex justify-between py-1 truncate">
+                  <span className="text-slate-500 font-sans shrink-0">الفرع المخصص:</span>
+                  <span className="text-slate-900 font-bold truncate mr-2 font-sans">{getBranchName(acc.branchId)}</span>
                 </div>
               </div>
             </div>
 
-            <div className="pt-2 flex justify-end border-t border-white/[0.04]">
+            <div className="pt-2 flex justify-end border-t border-slate-100">
               <button
                 onClick={() => handleOpenEdit(acc)}
-                className="px-3 py-1.5 bg-[#131B26] hover:bg-[#1A2534] border border-white/[0.08] text-slate-200 rounded-md text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
               >
-                <Edit className="w-3.5 h-3.5 text-emerald-400" />
+                <Edit className="w-3.5 h-3.5 text-blue-600" />
                 <span>تعديل الحساب</span>
               </button>
             </div>
           </div>
         ))}
         {accounts.length === 0 && (
-          <div className="col-span-full bg-[#111823] border border-white/[0.08] rounded-xl p-12 text-center text-slate-500 text-xs">
+          <div className="col-span-full bg-white border border-slate-200 rounded-2xl p-12 text-center text-slate-500 text-xs shadow-xs">
             لا توجد حسابات مبيعات مسجلة حتى الآن.
           </div>
         )}
@@ -186,78 +186,78 @@ export default function AccountsManagementView() {
 
       {/* Modal Form */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#111823] border border-white/[0.1] rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-5 dir-rtl font-sans">
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-              <h3 className="text-base font-bold text-white">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 dir-rtl font-sans">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3.5">
+              <h3 className="text-base font-bold text-slate-900">
                 {editingAccount ? 'تعديل حساب موظف المبيعات' : 'إضافة حساب مبيعات جديد'}
               </h3>
               <button
                 onClick={() => setShowModal(false)}
-                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/[0.04]"
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {errorMsg && (
-              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-300 text-xs flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-red-400" />
-                <span>{errorMsg}</span>
+              <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-800 text-xs flex items-center gap-2.5 shadow-xs">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
+                <span className="font-medium">{errorMsg}</span>
               </div>
             )}
 
             <form onSubmit={handleSave} className="space-y-4 text-xs font-sans">
               <div>
-                <label className="block text-slate-300 mb-1 font-medium">معرف المستخدم (Firebase Auth UID)</label>
+                <label className="block text-slate-700 mb-1 font-semibold">معرف المستخدم (Firebase Auth UID)</label>
                 <input
                   type="text"
                   required
                   disabled={Boolean(editingAccount)}
                   value={uidInput}
                   onChange={(e) => setUidInput(e.target.value)}
-                  className="w-full bg-[#0B1017] border border-white/[0.1] rounded-lg px-3.5 py-2 text-white font-mono disabled:opacity-40 text-xs focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 font-mono disabled:opacity-50 text-xs focus:outline-none focus:border-blue-600"
                   placeholder="انسخ الـ UID من لوحة تحكم Firebase"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1 font-medium">اسم الموظف</label>
+                <label className="block text-slate-700 mb-1 font-semibold">اسم الموظف</label>
                 <input
                   type="text"
                   required
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
-                  className="w-full bg-[#0B1017] border border-white/[0.1] rounded-lg px-3.5 py-2 text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:border-blue-600"
                   placeholder="محمد أحمد"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-300 mb-1 font-medium">تعيين الفرع</label>
+                <label className="block text-slate-700 mb-1 font-semibold">تعيين الفرع</label>
                 <select
                   value={branchIdInput}
                   onChange={(e) => setBranchIdInput(e.target.value)}
-                  className="w-full bg-[#0B1017] border border-white/[0.1] rounded-lg px-3.5 py-2 text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 focus:outline-none focus:border-blue-600"
                 >
                   {branches.map(b => (
-                    <option key={b.branchId} value={b.branchId} className="bg-[#111823] text-white">
+                    <option key={b.branchId} value={b.branchId} className="bg-white text-slate-900">
                       {b.name} ({b.branchId})
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="flex items-center justify-between bg-[#0B1017] p-3 rounded-lg border border-white/[0.06]">
+              <div className="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                 <div>
-                  <span className="text-white font-medium block">حالة الحساب</span>
+                  <span className="text-slate-900 font-bold block">حالة الحساب</span>
                   <span className="text-slate-500 text-[11px]">تعطيل الحساب يمنع الموظف من تسجيل الدخول للنظام.</span>
                 </div>
                 <input
                   type="checkbox"
                   checked={isActiveInput}
                   onChange={(e) => setIsActiveInput(e.target.checked)}
-                  className="w-4 h-4 accent-emerald-500 cursor-pointer"
+                  className="w-4 h-4 accent-blue-600 cursor-pointer"
                 />
               </div>
 
@@ -265,13 +265,13 @@ export default function AccountsManagementView() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-4 py-2 bg-white/[0.06] hover:bg-white/[0.1] text-slate-300 rounded-lg text-xs font-medium cursor-pointer"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
                 >
                   إلغاء
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-sm"
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold cursor-pointer shadow-sm transition-colors"
                 >
                   حفظ الحساب
                 </button>

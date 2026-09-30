@@ -2,22 +2,31 @@
 
 @layer base {
   :root {
-    --bg-canvas: #F6F8FA;
-    --surface-primary: #FFFFFF;
-    --surface-secondary: #F9FAFB;
-    --border-color: #E5E7EB;
-    --text-primary: #111827;
-    --text-secondary: #667085;
-    --text-muted: #98A2B3;
-    --sidebar-bg: #0B1017;
-    --sidebar-secondary: #111820;
-    --accent-blue: #2F81F7;
+    --bg-app: #F6F8FB;
+    --bg-surface: #FFFFFF;
+    --bg-subtle: #F8FAFC;
+    --sidebar-bg: #111827;
+    --sidebar-deeper: #0F172A;
+    --text-primary: #0F172A;
+    --text-secondary: #64748B;
+    --text-muted: #94A3B8;
+    --border: #E2E8F0;
+    --border-soft: #EDF1F5;
+    --primary: #2563EB;
+    --primary-hover: #1D4ED8;
+    --primary-light: #EFF6FF;
+    --success: #10B981;
+    --success-light: #ECFDF5;
+    --warning: #F59E0B;
+    --warning-light: #FFFBEB;
+    --danger: #EF4444;
+    --danger-light: #FEF2F2;
   }
 
   body {
     font-family: 'IBM Plex Sans Arabic', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: var(--bg-canvas);
-    color: var(--text-primary);
+    background-color: #F6F8FB;
+    color: #0F172A;
     direction: rtl;
     -webkit-font-smoothing: antialiased;
   }
@@ -33,7 +42,7 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--bg-canvas);
+  background: #F6F8FB;
 }
 ::-webkit-scrollbar-thumb {
   background: #CBD5E1;
@@ -46,4 +55,24 @@
 /* Tabular numbers for accurate vertical alignment */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Print Rules for Barcode Labels */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Hide header, navigation, sidebar, and non-printable elements */
+  nav, aside, header, .no-print, .print\:hidden {
+    display: none !important;
+  }
+
+  @page {
+    margin: 0;
+    size: auto;
+  }
 }
