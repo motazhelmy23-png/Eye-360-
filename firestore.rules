@@ -148,37 +148,60 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // --- 9. INVENTORY SESSIONS & ITEMS ---
+    // --- 9. INVENTORY SESSIONS, BASELINE CHUNKS & COUNTS ---
     match /inventory_sessions/{sessionId} {
-      allow read: if isAdmin() || (isSales() && resource.data.branchId == getUserBranchId());
+      allow read: if isAdmin() || (
+        isSales() && 
+        resource.data.branchId == getUserBranchId() &&
+        (request.auth.uid in resource.data.assignedUserIds)
+      );
       allow write: if isAdmin();
 
-      match /items/{itemId} {
+      match /baseline_chunks/{chunkId} {
+        allow read, write: if isAdmin();
+      }
+
+      match /counts/{itemCode} {
         allow read: if isAdmin() || (
           isSales() && 
-          get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.branchId == getUserBranchId()
+          exists(/databases/$(database)/documents/inventory_sessions/$(sessionId)) &&
+          get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.branchId == getUserBranchId() &&
+          (request.auth.uid in get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.assignedUserIds)
         );
         
         allow create: if isAdmin() || (
           isSales() &&
           exists(/databases/$(database)/documents/inventory_sessions/$(sessionId)) &&
+          get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.status == 'ACTIVE' &&
           get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.branchId == getUserBranchId() &&
-          get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.status == 'open' &&
-          request.resource.data.createdByUid == request.auth.uid &&
-          request.resource.data.branchId == getUserBranchId()
+          (request.auth.uid in get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.assignedUserIds) &&
+          request.resource.data.itemCode == itemCode &&
+          request.resource.data.branchId == getUserBranchId() &&
+          request.resource.data.firstCountedByUid == request.auth.uid
         );
 
         allow update: if isAdmin() || (
           isSales() &&
           exists(/databases/$(database)/documents/inventory_sessions/$(sessionId)) &&
           get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.branchId == getUserBranchId() &&
-          get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.status == 'open' &&
-          resource.data.createdByUid == request.auth.uid &&
-          resource.data.branchId == getUserBranchId() &&
-          request.resource.data.createdByUid == resource.data.createdByUid &&
-          request.resource.data.branchId == resource.data.branchId &&
+          (request.auth.uid in get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.assignedUserIds) &&
           request.resource.data.itemCode == resource.data.itemCode &&
-          request.resource.data.zoneId == resource.data.zoneId
+          request.resource.data.branchId == resource.data.branchId &&
+          request.resource.data.firstQty == resource.data.firstQty &&
+          request.resource.data.firstCountedByUid == resource.data.firstCountedByUid &&
+          (
+            // Active edit
+            (
+              get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.status == 'ACTIVE' &&
+              request.resource.data.lastUpdatedByUid == request.auth.uid
+            ) ||
+            // Recount during review
+            (
+              get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.status == 'REVIEW' &&
+              resource.data.recountRequested == true &&
+              request.resource.data.recountedByUid == request.auth.uid
+            )
+          )
         );
 
         allow delete: if isAdmin();

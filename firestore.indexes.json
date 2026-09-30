@@ -1,6 +1,20 @@
 {
   "indexes": [
     {
+      "collectionGroup": "inventory_sessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "branchId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "inventory_updates",
       "queryScope": "COLLECTION",
       "fields": [

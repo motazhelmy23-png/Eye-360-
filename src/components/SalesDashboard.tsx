@@ -6,11 +6,14 @@ import { BranchProfile, getBranch } from '../services/branchService';
 import { NormalizedProduct } from '../types/inventory';
 import { searchLocalProducts, getLocalIndexedDbState } from '../services/indexedDbService';
 import { smartStartupSync } from '../services/smartSyncService';
+import { getInventorySessions } from '../services/inventorySessionService';
+import { InventorySession } from '../types/inventorySession';
+import SalesInventoryCountView from './SalesInventoryCountView';
 import { 
   Barcode, Search, Shield, AlertTriangle, RefreshCw, CheckCircle2, 
   ChevronRight, ChevronLeft, Eye, X, HardDrive, Package, Cpu, 
   Camera, Scan, Store, User, LogOut, WifiOff, CheckCheck, 
-  Layers, ArrowUpRight, Sparkles, Building2
+  Layers, ArrowUpRight, Sparkles, Building2, ClipboardCheck, ArrowLeft
 } from 'lucide-react';
 
 interface SalesDashboardProps {
@@ -36,6 +39,8 @@ export default function SalesDashboard({ profile, branchProfile, onLogout }: Sal
   const [localState, setLocalState] = useState<any>(null);
   const [selectedProduct, setSelectedProduct] = useState<NormalizedProduct | null>(null);
   const [isOffline, setIsOffline] = useState(false);
+  const [assignedSessions, setAssignedSessions] = useState<InventorySession[]>([]);
+  const [activeCountSession, setActiveCountSession] = useState<InventorySession | null>(null);
 
   // Pagination & camera modal
   const [currentPage, setCurrentPage] = useState(1);
@@ -64,6 +69,15 @@ export default function SalesDashboard({ profile, branchProfile, onLogout }: Sal
       const all = await searchLocalProducts('', 15000);
       setProducts(all);
       setFilteredProducts(all);
+
+      if (profile.branchId && profile.uid) {
+        try {
+          const sess = await getInventorySessions(profile.branchId, profile.uid);
+          setAssignedSessions(sess.filter(s => s.status === 'ACTIVE' || s.status === 'REVIEW'));
+        } catch (sessErr) {
+          console.warn('Could not load inventory sessions:', sessErr);
+        }
+      }
     } catch (err: any) {
       console.error('Startup sync error / offline mode:', err);
       setIsOffline(true);
@@ -217,6 +231,22 @@ export default function SalesDashboard({ profile, branchProfile, onLogout }: Sal
     );
   }
 
+  if (activeCountSession) {
+    return (
+      <div className="min-h-screen bg-[#0B1017] text-slate-100 font-sans dir-rtl flex flex-col p-4 md:p-6">
+        <SalesInventoryCountView
+          session={activeCountSession}
+          currentUser={profile}
+          branchProfile={branchProfile}
+          onBack={() => {
+            setActiveCountSession(null);
+            initDashboard();
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0B1017] text-slate-100 font-sans dir-rtl flex flex-col selection:bg-emerald-500/25">
       {/* 
@@ -282,6 +312,53 @@ export default function SalesDashboard({ profile, branchProfile, onLogout }: Sal
         ====================================================================
       */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-5">
+        {/* Active Inventory Sessions Banner */}
+        {assignedSessions.length > 0 && (
+          <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 shadow-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+                <ClipboardCheck className="w-4 h-4" />
+                <span>جلسات الجرد الفعلي المخصصة لفرعك</span>
+              </div>
+              <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded text-[10px] font-mono font-bold">
+                {assignedSessions.length} جلسة
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {assignedSessions.map(sess => (
+                <div
+                  key={sess.id}
+                  className="bg-[#111823] border border-white/[0.08] rounded-xl p-3.5 flex items-center justify-between gap-3"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs text-white">{sess.name}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                        sess.status === 'ACTIVE' 
+                          ? 'bg-emerald-500/20 text-emerald-400 animate-pulse' 
+                          : 'bg-amber-500/20 text-amber-400'
+                      }`}>
+                        {sess.status === 'ACTIVE' ? 'جرد فعّال الآن' : 'قيد المراجعة'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      النوع: {sess.type === 'FULL' ? 'جرد كامل' : sess.type === 'CATEGORY' ? `جرد تصنيف (${sess.category})` : 'أصناف محددة'}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => setActiveCountSession(sess)}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-600/20 transition-all shrink-0"
+                  >
+                    <span>{sess.status === 'ACTIVE' ? 'بدء الجرد' : 'متابعة إعادة الجرد'}</span>
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {/* Command Search Bar */}
         <div className="bg-[#111823] border border-white/[0.08] rounded-xl p-4 shadow-xl space-y-3">
           <div className="flex flex-col md:flex-row items-center justify-between gap-3">

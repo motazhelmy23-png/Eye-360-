@@ -17,6 +17,7 @@ import DataHealthDashboard from './components/DataHealthDashboard';
 import ProductsBarcodeView from './components/ProductsBarcodeView';
 import BranchManagementView from './components/BranchManagementView';
 import AccountsManagementView from './components/AccountsManagementView';
+import PhysicalInventoryAdminView from './components/PhysicalInventoryAdminView';
 import SalesDashboard from './components/SalesDashboard';
 import { 
   Shield, Database, User, LogOut, CheckCircle2, AlertTriangle, 
@@ -825,14 +826,16 @@ export default function App() {
               </div>
             )}
 
-            {['inventory_count', 'reports'].includes(activeAdminTab) && (
+            {activeAdminTab === 'inventory_count' && <PhysicalInventoryAdminView currentUser={profile} />}
+
+            {activeAdminTab === 'reports' && (
               <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-2xl p-16 text-center space-y-4 shadow-sm">
                 <div className="w-12 h-12 bg-blue-50 text-[#2F81F7] rounded-xl flex items-center justify-center mx-auto border border-blue-200">
                   <ClipboardCheck className="w-6 h-6" />
                 </div>
                 <h3 className="text-base font-bold text-[#111827]">هذه الوحدة مجدولة في خطة التشغيل القادمة</h3>
                 <p className="text-[#667085] text-xs max-w-md mx-auto leading-relaxed">
-                  تم تجهيز الهيكل التنظيمي والربط البياني بنجاح، وسيتم إطلاق واجهة الجرد الفعلي والبلاغات فور اعتمادها رسمياً.
+                  تم تجهيز الهيكل التنظيمي والربط البياني بنجاح، وسيتم إطلاق واجهة البلاغات والملاحظات فور اعتمادها رسمياً.
                 </p>
               </div>
             )}
