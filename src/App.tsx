@@ -18,6 +18,7 @@ import ProductsBarcodeView from './components/ProductsBarcodeView';
 import BranchManagementView from './components/BranchManagementView';
 import AccountsManagementView from './components/AccountsManagementView';
 import PhysicalInventoryAdminView from './components/PhysicalInventoryAdminView';
+import UnifiedSettingsView from './components/UnifiedSettingsView';
 import SalesDashboard from './components/SalesDashboard';
 import { CopyrightNotice } from './components/CopyrightNotice';
 import { 
@@ -634,7 +635,7 @@ export default function App() {
     {
       groupTitle: 'النظام',
       items: [
-        { id: 'settings', label: 'الفحص التشخيصي والربط', icon: Settings },
+        { id: 'settings', label: 'مركز التحكم والإعدادات', icon: Settings },
         { id: 'reports', label: 'البلاغات والملاحظات', icon: MessageSquareWarning },
       ]
     }
@@ -801,36 +802,11 @@ export default function App() {
             {activeAdminTab === 'catalog_history' && <CatalogVersionHistory />}
 
             {activeAdminTab === 'settings' && (
-              <div className="space-y-6">
-                <div className="bg-[#FFFFFF] border border-[#E5E7EB] rounded-2xl p-6 shadow-sm">
-                  <div className="flex items-center gap-2.5 mb-2">
-                    <Settings className="w-5 h-5 text-[#2F81F7]" />
-                    <h2 className="text-base font-bold text-[#111827]">الفحص التشخيصي وإعدادات ربط النظام</h2>
-                  </div>
-                  <p className="text-[#667085] text-xs mb-6 leading-relaxed">المعطيات الفنية للربط السحابي وقاعدة بيانات Firestore المخصصة.</p>
-
-                  {diagnostics && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-[#F9FAFB] p-4 rounded-xl border border-[#E5E7EB]">
-                        <span className="text-xs text-[#667085] block mb-1">مشروع Firebase</span>
-                        <span className="text-[#111823] font-mono text-sm font-semibold">{diagnostics.projectId}</span>
-                      </div>
-                      <div className="bg-[#F9FAFB] p-4 rounded-xl border border-[#E5E7EB]">
-                        <span className="text-xs text-[#667085] block mb-1">معرف قاعدة بيانات Firestore</span>
-                        <span className="text-[#2F81F7] font-mono text-xs font-semibold break-all">{diagnostics.firestoreDatabaseId}</span>
-                      </div>
-                      <div className="bg-[#F9FAFB] p-4 rounded-xl border border-[#E5E7EB]">
-                        <span className="text-xs text-[#667085] block mb-1">حالة المصادقة</span>
-                        <span className="text-[#111827] font-semibold text-sm">{diagnostics.authStatus}</span>
-                      </div>
-                      <div className="bg-[#F9FAFB] p-4 rounded-xl border border-[#E5E7EB]">
-                        <span className="text-xs text-[#667085] block mb-1">الدور التشغيلي الحالي</span>
-                        <span className="text-[#2F81F7] font-semibold text-sm capitalize">{diagnostics.verifiedRole}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <UnifiedSettingsView 
+                currentUser={profile} 
+                diagnostics={diagnostics} 
+                onNavigateTab={(tab) => setActiveAdminTab(tab as any)} 
+              />
             )}
 
             {activeAdminTab === 'inventory_count' && <PhysicalInventoryAdminView currentUser={profile} />}
