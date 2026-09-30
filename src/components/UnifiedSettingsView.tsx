@@ -14,7 +14,8 @@ import {
   Users, RefreshCw, CheckCircle2, AlertTriangle, Download, 
   Trash2, Volume2, Globe, Shield, Tag, Eye, ArrowRight,
   Sparkles, ShoppingBag, Layers, Lock, Cpu, Server, Save,
-  Scan, Bell, Clock, Database, Radio, Wifi, Smartphone, FileText
+  Scan, Bell, Clock, Database, Radio, Wifi, Smartphone, FileText,
+  X, HelpCircle, Check
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -41,6 +42,10 @@ export default function UnifiedSettingsView({
   const [exporting, setExporting] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
 
+  // In-app Modal States (Zero window.confirm / window.alert)
+  const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
+  const [showClearCacheConfirmModal, setShowClearCacheConfirmModal] = useState(false);
+
   useEffect(() => {
     loadDiagnosticsData();
   }, []);
@@ -52,6 +57,7 @@ export default function UnifiedSettingsView({
       setLocalDbState(dbState);
       const health = await quickCloudHealthCheck();
       setCloudHealth(health);
+      showSuccessFeedback('تم تحديث فحص النظام والذاكرة بنجاح');
     } catch (err) {
       console.error('Failed to load diagnostics data:', err);
     } finally {
@@ -67,35 +73,34 @@ export default function UnifiedSettingsView({
   const handleUpdateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     const updated = saveAppSettings({ [key]: value });
     setSettings(updated);
-    showSuccessFeedback('تم حفظ التعديلات وتطبيقها بنجاح');
+    showSuccessFeedback('تم حفظ وتطبيق التعديل بنجاح');
   };
 
-  const handleResetSettings = () => {
-    if (window.confirm('هل أنت متأكد من استعادة كافة الإعدادات إلى الوضع الافتراضي للنظام؟')) {
-      const def = resetAppSettings();
-      setSettings(def);
-      showSuccessFeedback('تم استعادة الإعدادات الافتراضية');
-    }
+  const executeResetSettings = () => {
+    const def = resetAppSettings();
+    setSettings(def);
+    setShowResetConfirmModal(false);
+    showSuccessFeedback('تم استعادة كافة الإعدادات الافتراضية');
   };
 
-  const handleClearLocalCache = async () => {
-    if (window.confirm('تنبيه: سيتم تفريغ الكتالوج من الذاكرة المحلية (IndexedDB). هل تريد المتابعة؟ سيتطلب ذلك إعادة تحميل أو مزامنة فورية.')) {
-      setClearingCache(true);
-      try {
-        const db = await openCatalogDB();
-        const tx = db.transaction(['products', 'metadata'], 'readwrite');
-        tx.objectStore('products').clear();
-        tx.objectStore('metadata').clear();
-        await new Promise<void>((resolve) => {
-          tx.oncomplete = () => resolve();
-        });
-        showSuccessFeedback('تم تفريغ الذاكرة المحلية بنجاح.');
-        await loadDiagnosticsData();
-      } catch (err) {
-        console.error('Clear cache error:', err);
-      } finally {
-        setClearingCache(false);
-      }
+  const executeClearLocalCache = async () => {
+    setClearingCache(true);
+    try {
+      const db = await openCatalogDB();
+      const tx = db.transaction(['products', 'metadata'], 'readwrite');
+      tx.objectStore('products').clear();
+      tx.objectStore('metadata').clear();
+      await new Promise<void>((resolve) => {
+        tx.oncomplete = () => resolve();
+      });
+      setShowClearCacheConfirmModal(false);
+      showSuccessFeedback('تم تفريغ الذاكرة المحلية بنجاح');
+      await loadDiagnosticsData();
+    } catch (err) {
+      console.error('Clear cache error:', err);
+      showSuccessFeedback('حدث خطأ أثناء تفريغ الذاكرة');
+    } finally {
+      setClearingCache(false);
     }
   };
 
@@ -104,7 +109,7 @@ export default function UnifiedSettingsView({
     try {
       const allProducts = await searchLocalProducts('', 20000);
       if (allProducts.length === 0) {
-        alert('لا توجد أصناف مخزنة محلياً للتصدير.');
+        showSuccessFeedback('لا توجد أصناف مخزنة محلياً لتصديرها');
         return;
       }
 
@@ -126,10 +131,10 @@ export default function UnifiedSettingsView({
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Catalog');
         XLSX.writeFile(workbook, `Eye360_Catalog_Backup_${timestamp}.xlsx`);
       }
-      showSuccessFeedback(`تم تصدير النسخة الاحتياطية (${allProducts.length} صنف) بنجاح.`);
+      showSuccessFeedback(`تم تصدير النسخة الاحتياطية (${allProducts.length.toLocaleString()} صنف) بنجاح`);
     } catch (err) {
       console.error('Export error:', err);
-      alert('فشل تصدير الكتالوج.');
+      showSuccessFeedback('فشل تصدير الكتالوج');
     } finally {
       setExporting(false);
     }
@@ -176,15 +181,15 @@ export default function UnifiedSettingsView({
           <button
             onClick={loadDiagnosticsData}
             disabled={loadingHealth}
-            className="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs active:scale-98"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loadingHealth ? 'animate-spin text-blue-600' : ''}`} />
             <span>تحديث الفحص</span>
           </button>
 
           <button
-            onClick={handleResetSettings}
-            className="px-3.5 py-2 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+            onClick={() => setShowResetConfirmModal(true)}
+            className="px-3.5 py-2 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-700 rounded-xl text-xs font-semibold transition-colors cursor-pointer shadow-2xs active:scale-98"
           >
             استعادة الافتراضي
           </button>
@@ -233,28 +238,28 @@ export default function UnifiedSettingsView({
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <button
                   onClick={() => onNavigateTab('branches')}
-                  className="p-2 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl text-right font-medium text-slate-700 flex items-center justify-between cursor-pointer"
+                  className="p-2 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl text-right font-medium text-slate-700 flex items-center justify-between cursor-pointer shadow-2xs transition-colors"
                 >
                   <span>الفروع والمواقع</span>
                   <ArrowRight className="w-3 h-3 text-slate-400 rotate-180" />
                 </button>
                 <button
                   onClick={() => onNavigateTab('accounts')}
-                  className="p-2 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl text-right font-medium text-slate-700 flex items-center justify-between cursor-pointer"
+                  className="p-2 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl text-right font-medium text-slate-700 flex items-center justify-between cursor-pointer shadow-2xs transition-colors"
                 >
                   <span>الحسابات</span>
                   <ArrowRight className="w-3 h-3 text-slate-400 rotate-180" />
                 </button>
                 <button
                   onClick={() => onNavigateTab('catalog_replacement')}
-                  className="p-2 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl text-right font-medium text-slate-700 flex items-center justify-between cursor-pointer"
+                  className="p-2 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl text-right font-medium text-slate-700 flex items-center justify-between cursor-pointer shadow-2xs transition-colors"
                 >
                   <span>استبدال الكتالوج</span>
                   <ArrowRight className="w-3 h-3 text-slate-400 rotate-180" />
                 </button>
                 <button
                   onClick={() => onNavigateTab('overview')}
-                  className="p-2 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl text-right font-medium text-slate-700 flex items-center justify-between cursor-pointer"
+                  className="p-2 bg-white hover:bg-blue-50 border border-slate-200 rounded-xl text-right font-medium text-slate-700 flex items-center justify-between cursor-pointer shadow-2xs transition-colors"
                 >
                   <span>سلامة البيانات</span>
                   <ArrowRight className="w-3 h-3 text-slate-400 rotate-180" />
@@ -303,7 +308,7 @@ export default function UnifiedSettingsView({
                     <select
                       value={settings.itemsPerPage}
                       onChange={(e) => handleUpdateSetting('itemsPerPage', parseInt(e.target.value))}
-                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-mono font-semibold focus:outline-none focus:border-blue-600 focus:bg-white"
+                      className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-slate-900 font-mono font-semibold focus:outline-none focus:border-blue-600 focus:bg-white cursor-pointer"
                     >
                       <option value={15}>15 صنف في الصفحة</option>
                       <option value={25}>25 صنف في الصفحة (الافتراضي)</option>
@@ -323,7 +328,7 @@ export default function UnifiedSettingsView({
                     <button
                       type="button"
                       onClick={playScanSound}
-                      className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                      className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 rounded-lg text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs active:scale-95"
                     >
                       <Volume2 className="w-3 h-3 text-blue-600" />
                       <span>اختبار الصوت</span>
@@ -426,7 +431,7 @@ export default function UnifiedSettingsView({
                       <button
                         key={c}
                         onClick={() => handleUpdateSetting('defaultLabelCopies', c)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-colors cursor-pointer shadow-2xs active:scale-95 ${
                           settings.defaultLabelCopies === c
                             ? 'bg-blue-600 text-white'
                             : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
@@ -513,7 +518,7 @@ export default function UnifiedSettingsView({
                       <button
                         key={ms}
                         onClick={() => handleUpdateSetting('scannerDebounceMs', ms)}
-                        className={`flex-1 py-1.5 rounded-lg font-mono font-bold text-xs transition-colors cursor-pointer ${
+                        className={`flex-1 py-1.5 rounded-lg font-mono font-bold text-xs transition-colors cursor-pointer shadow-2xs active:scale-95 ${
                           settings.scannerDebounceMs === ms
                             ? 'bg-blue-600 text-white'
                             : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
@@ -533,7 +538,7 @@ export default function UnifiedSettingsView({
                   <select
                     value={settings.preferredCameraFacing}
                     onChange={(e) => handleUpdateSetting('preferredCameraFacing', e.target.value as any)}
-                    className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                    className="bg-white border border-slate-300 rounded-xl px-3 py-1.5 font-bold text-slate-900 focus:outline-none focus:border-blue-600 cursor-pointer"
                   >
                     <option value="environment">الكاميرا الخلفية (Environment / Back)</option>
                     <option value="user">الكاميرا الأمامية (User / Front)</option>
@@ -582,7 +587,7 @@ export default function UnifiedSettingsView({
                       <button
                         key={num}
                         onClick={() => handleUpdateSetting('lowStockThreshold', num)}
-                        className={`px-2.5 py-1.5 rounded-lg font-mono font-bold text-xs transition-colors cursor-pointer ${
+                        className={`px-2.5 py-1.5 rounded-lg font-mono font-bold text-xs transition-colors cursor-pointer shadow-2xs active:scale-95 ${
                           settings.lowStockThreshold === num
                             ? 'bg-amber-600 text-white'
                             : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
@@ -634,7 +639,7 @@ export default function UnifiedSettingsView({
                       {settings.sessionTimeoutMinutes > 0 ? `${settings.sessionTimeoutMinutes} دقيقة` : 'معطل'}
                     </span>
                   </div>
-                  <div className="grid grid-cols-4 gap-2 pt-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
                     {[
                       { val: 15, label: '15 دقيقة' },
                       { val: 30, label: '30 دقيقة (موصى به)' },
@@ -644,9 +649,9 @@ export default function UnifiedSettingsView({
                       <button
                         key={opt.val}
                         onClick={() => handleUpdateSetting('sessionTimeoutMinutes', opt.val)}
-                        className={`py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                        className={`py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer shadow-2xs active:scale-98 ${
                           settings.sessionTimeoutMinutes === opt.val
-                            ? 'bg-blue-600 text-white shadow-2xs font-bold'
+                            ? 'bg-blue-600 text-white shadow-xs font-bold'
                             : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
                         }`}
                       >
@@ -694,7 +699,7 @@ export default function UnifiedSettingsView({
                       {settings.autoSyncIntervalMinutes > 0 ? `كل ${settings.autoSyncIntervalMinutes} دقائق` : 'يدوي فقط'}
                     </span>
                   </div>
-                  <div className="grid grid-cols-4 gap-2 pt-1">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
                     {[
                       { val: 5, label: 'كل 5 دقائق' },
                       { val: 10, label: 'كل 10 دقائق (الافتراضي)' },
@@ -704,9 +709,9 @@ export default function UnifiedSettingsView({
                       <button
                         key={opt.val}
                         onClick={() => handleUpdateSetting('autoSyncIntervalMinutes', opt.val)}
-                        className={`py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                        className={`py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer shadow-2xs active:scale-98 ${
                           settings.autoSyncIntervalMinutes === opt.val
-                            ? 'bg-blue-600 text-white shadow-2xs font-bold'
+                            ? 'bg-blue-600 text-white shadow-xs font-bold'
                             : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
                         }`}
                       >
@@ -848,12 +853,12 @@ export default function UnifiedSettingsView({
                   <span className="text-amber-700 text-[11px]">حذف الكتالوج من IndexedDB في حال وجود بيانات تالفة وإعادة البناء النظيف</span>
                 </div>
                 <button
-                  onClick={handleClearLocalCache}
+                  onClick={() => setShowClearCacheConfirmModal(true)}
                   disabled={clearingCache}
-                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-2xs"
+                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold flex items-center gap-1.5 transition-colors cursor-pointer shrink-0 shadow-2xs active:scale-95"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>{clearingCache ? 'جاري التفريغ...' : 'تفريغ الكاش'}</span>
+                  <span>تفريغ الكاش</span>
                 </button>
               </div>
             </div>
@@ -913,7 +918,7 @@ export default function UnifiedSettingsView({
                   <button
                     onClick={() => handleExportCatalogBackup('excel')}
                     disabled={exporting}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs shrink-0"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs shrink-0 active:scale-98"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>{exporting ? 'جاري التصدير...' : 'تصدير Excel'}</span>
@@ -928,7 +933,7 @@ export default function UnifiedSettingsView({
                   <button
                     onClick={() => handleExportCatalogBackup('json')}
                     disabled={exporting}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs shrink-0"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs shrink-0 active:scale-98"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>{exporting ? 'جاري التصدير...' : 'تصدير JSON'}</span>
@@ -939,6 +944,67 @@ export default function UnifiedSettingsView({
           )}
         </div>
       </div>
+
+      {/* CONFIRMATION MODAL: RESET DEFAULTS */}
+      {showResetConfirmModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-right">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-900">تأكيد استعادة الإعدادات الافتراضية</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              هل أنت متأكد من رغبتك في إعادة ضبط جميع الإعدادات وتفضيلات العرض والطابعات إلى الوضع الافتراضي الأصلي للنظام؟
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowResetConfirmModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={executeResetSettings}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-xs"
+              >
+                نعم، استعادة الافتراضي
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION MODAL: CLEAR LOCAL CACHE */}
+      {showClearCacheConfirmModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-right">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-900">تأكيد تفريغ الذاكرة المحلية (IndexedDB)</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              سيتم تفريغ كافة بيانات الكتالوج المحفوظة محلياً في هذا المتصفح. ستحتاج لإعادة مزامنة الكتالوج من السحابة أو استبداله.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                onClick={() => setShowClearCacheConfirmModal(false)}
+                disabled={clearingCache}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={executeClearLocalCache}
+                disabled={clearingCache}
+                className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-xs flex items-center gap-1.5"
+              >
+                {clearingCache ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+                <span>{clearingCache ? 'جاري التفريغ...' : 'نعم، تفريغ الذاكرة'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
