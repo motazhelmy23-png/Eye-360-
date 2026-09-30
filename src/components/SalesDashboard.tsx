@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BrandLogo } from './BrandLogo';
 import { BarcodeScanner } from './BarcodeScanner';
 import { BarcodeLabelModal } from './BarcodeLabelModal';
+import { ProductDetailsModal } from './ProductDetailsModal';
 import { UserProfile } from '../services/authService';
 import { BranchProfile, getBranch } from '../services/branchService';
 import { NormalizedProduct } from '../types/inventory';
@@ -525,126 +526,21 @@ export default function SalesDashboard({ profile, branchProfile, onLogout }: Sal
         <CopyrightNotice variant="dark" />
       </footer>
 
-      {/* 
-        ====================================================================
-        PRODUCT DETAILS MODAL
-        ====================================================================
-      */}
+      {/* Product Details Modal */}
       {selectedProduct && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto dir-rtl font-sans">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3.5">
-              <div>
-                <span className="text-xs text-blue-600 font-mono font-bold block">{selectedProduct.itemCode}</span>
-                <h3 className="text-base font-bold text-slate-900 mt-0.5">{selectedProduct.name || 'بدون اسم صنف'}</h3>
-              </div>
-              <button
-                onClick={() => setSelectedProduct(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 font-mono text-xs tabular-nums">
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <span className="text-slate-500 block mb-1 text-[11px] font-sans font-medium">الباركود</span>
-                <span className="text-slate-900 font-bold">{selectedProduct.barcode || '—'}</span>
-              </div>
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <span className="text-slate-500 block mb-1 text-[11px] font-sans font-medium">كود الموديل</span>
-                <span className="text-slate-900 font-bold">{selectedProduct.modelCode || '—'}</span>
-              </div>
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <span className="text-slate-500 block mb-1 text-[11px] font-sans font-medium">الماركة</span>
-                <span className="text-slate-900 font-bold font-sans">{selectedProduct.brand || '—'}</span>
-              </div>
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <span className="text-slate-500 block mb-1 text-[11px] font-sans font-medium">التصنيف</span>
-                <span className="text-slate-900 font-bold font-sans">{selectedProduct.category || '—'}</span>
-              </div>
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <span className="text-slate-500 block mb-1 text-[11px] font-sans font-medium">سعر البيع</span>
-                <span className="text-slate-900 font-bold">{selectedProduct.salePrice !== null ? `${selectedProduct.salePrice} ج.م` : '—'}</span>
-              </div>
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <span className="text-slate-500 block mb-1 text-[11px] font-sans font-medium">إجمالي المخزون</span>
-                <span className="text-slate-900 font-bold">{selectedProduct.totalStock}</span>
-              </div>
-            </div>
-
-            {/* Own Branch Stock Highlight Card */}
-            {(() => {
-              const modalOwnStock = getOwnBranchStock(selectedProduct, ownLocationId);
-              if (modalOwnStock !== null) {
-                return (
-                  <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex items-center justify-between font-mono shadow-2xs">
-                    <div>
-                      <span className="text-xs text-emerald-800 font-semibold font-sans block">رصيد فرعك الحالي ({ownBranchName})</span>
-                      <span className="text-emerald-900 text-lg font-bold">{modalOwnStock.toLocaleString()} وحدة</span>
-                    </div>
-                    <span className="text-xs bg-emerald-100 text-emerald-800 px-3 py-1 rounded-lg border border-emerald-300 font-bold">
-                      فرعك
-                    </span>
-                  </div>
-                );
-              }
-              return (
-                <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-center justify-between font-mono shadow-2xs">
-                  <div>
-                    <span className="text-xs text-amber-800 font-semibold font-sans block">رصيد فرعك الحالي ({ownBranchName})</span>
-                    <span className="text-amber-900 text-lg font-bold">— (خطأ ربط)</span>
-                    <span className="text-[11px] text-amber-800 block mt-1 font-sans">تنبيه: موقع المخزون غير مرتبط بشكل صحيح بالكتالوج النشط</span>
-                  </div>
-                  <span className="text-xs bg-amber-100 text-amber-800 px-3 py-1 rounded-lg border border-amber-300 font-bold">
-                    خطأ ربط
-                  </span>
-                </div>
-              );
-            })()}
-
-            {/* Cross-Branch Stock Availability */}
-            {allowCrossView && (
-              <div className="space-y-2.5">
-                <h4 className="text-slate-900 font-bold text-xs">التوفر في المواقع والفروع الأخرى:</h4>
-                <div className="bg-slate-50 rounded-xl border border-slate-200 divide-y divide-slate-200 font-mono text-xs max-h-48 overflow-y-auto">
-                  {selectedProduct.stocks && Object.entries(selectedProduct.stocks).map(([locId, qty]) => {
-                    const isOwn = locId === ownLocationId;
-                    return (
-                      <div key={locId} className={`p-3 flex items-center justify-between ${isOwn ? 'bg-emerald-50/50' : ''}`}>
-                        <span className={isOwn ? 'text-emerald-800 font-bold' : 'text-slate-700 font-medium'}>
-                          {locId} {isOwn ? '(فرعك)' : ''}
-                        </span>
-                        <span className={isOwn ? 'text-emerald-800 font-bold' : 'text-slate-900 font-bold'}>{qty} وحدة</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div className="pt-2 flex items-center justify-between border-t border-slate-200">
-              <button
-                onClick={() => {
-                  const prod = selectedProduct;
-                  setSelectedProduct(null);
-                  openPrintModal(prod);
-                }}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs transition-colors"
-              >
-                <Printer className="w-4 h-4" />
-                <span>طباعة باركود الصنف</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedProduct(null)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
-              >
-                إغلاق
-              </button>
-            </div>
-          </div>
-        </div>
+        <ProductDetailsModal
+          product={selectedProduct}
+          allProducts={products}
+          isOpen={Boolean(selectedProduct)}
+          onClose={() => setSelectedProduct(null)}
+          onSelectProduct={(p) => setSelectedProduct(p)}
+          onOpenPrintModal={(p) => {
+            setSelectedProduct(null);
+            openPrintModal(p);
+          }}
+          branchProfile={branchProfile}
+          isAdmin={false}
+        />
       )}
 
       {/* Camera Barcode Modal */}

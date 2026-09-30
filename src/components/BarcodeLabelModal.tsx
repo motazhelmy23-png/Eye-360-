@@ -110,7 +110,7 @@ export const BarcodeLabelModal: React.FC<BarcodeLabelModalProps> = ({
 
   const presetLabels: Record<LabelPreset, { name: string; desc: string; size: string }> = {
     thermal_small: {
-      name: 'ملصق حراري صغير (نظارات وإطارات)',
+      name: 'ملصق حراري صغير (على المنتج)',
       desc: 'مناسب للبكرات الحرارية 38×25 مم لطابعات Zebra / Xprinter',
       size: '38 × 25 مم',
     },
