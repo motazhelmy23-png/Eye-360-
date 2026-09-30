@@ -19,6 +19,7 @@ import BranchManagementView from './components/BranchManagementView';
 import AccountsManagementView from './components/AccountsManagementView';
 import PhysicalInventoryAdminView from './components/PhysicalInventoryAdminView';
 import SalesDashboard from './components/SalesDashboard';
+import { CopyrightNotice } from './components/CopyrightNotice';
 import { 
   Shield, Database, User, LogOut, CheckCircle2, AlertTriangle, 
   RefreshCw, Building2, LayoutDashboard, FileSpreadsheet, 
@@ -520,8 +521,9 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="text-[11px] text-[#98A2B3] font-mono">
-                Eye 360 Enterprise v1.0 · Secured Session Gateway
+              <div className="text-[11px] text-[#98A2B3] font-mono flex items-center justify-between">
+                <span>Secured Enterprise Session</span>
+                <CopyrightNotice variant="dark" className="text-[10px]" />
               </div>
             </div>
 
@@ -529,8 +531,8 @@ export default function App() {
         </main>
 
         {/* Tightened Footer Spacing */}
-        <footer className="w-full max-w-7xl mx-auto py-3 px-4 text-center text-xs text-[#4B5563] font-normal">
-          Eye 360 Enterprise Operations Platform · جميع الحقوق محفوظة
+        <footer className="w-full max-w-7xl mx-auto py-3 px-4 text-center">
+          <CopyrightNotice variant="dark" />
         </footer>
       </div>
     );
@@ -740,6 +742,11 @@ export default function App() {
               <LogOut className="w-4 h-4" />
             </button>
           </div>
+          {!sidebarCollapsed && (
+            <div className="mt-2 text-center">
+              <CopyrightNotice variant="light" className="text-[10px] text-slate-500" />
+            </div>
+          )}
         </div>
       </aside>
 
@@ -841,6 +848,10 @@ export default function App() {
             )}
           </div>
         </main>
+
+        <footer className="py-3 px-6 text-center border-t border-[#E5E7EB] bg-[#FFFFFF] shrink-0">
+          <CopyrightNotice variant="dark" />
+        </footer>
       </div>
     </div>
   );

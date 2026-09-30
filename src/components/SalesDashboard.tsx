@@ -9,6 +9,7 @@ import { smartStartupSync } from '../services/smartSyncService';
 import { getInventorySessions } from '../services/inventorySessionService';
 import { InventorySession } from '../types/inventorySession';
 import SalesInventoryCountView from './SalesInventoryCountView';
+import { CopyrightNotice } from './CopyrightNotice';
 import { 
   Barcode, Search, Shield, AlertTriangle, RefreshCw, CheckCircle2, 
   ChevronRight, ChevronLeft, Eye, X, HardDrive, Package, Cpu, 
@@ -233,7 +234,7 @@ export default function SalesDashboard({ profile, branchProfile, onLogout }: Sal
 
   if (activeCountSession) {
     return (
-      <div className="min-h-screen bg-[#0B1017] text-slate-100 font-sans dir-rtl flex flex-col p-4 md:p-6">
+      <div className="min-h-screen bg-[#0B1017] text-slate-100 font-sans dir-rtl flex flex-col justify-between p-4 md:p-6">
         <SalesInventoryCountView
           session={activeCountSession}
           currentUser={profile}
@@ -243,6 +244,9 @@ export default function SalesDashboard({ profile, branchProfile, onLogout }: Sal
             initDashboard();
           }}
         />
+        <div className="py-4 text-center">
+          <CopyrightNotice variant="light" />
+        </div>
       </div>
     );
   }
@@ -497,6 +501,10 @@ export default function SalesDashboard({ profile, branchProfile, onLogout }: Sal
           )}
         </div>
       </main>
+
+      <footer className="py-4 px-6 text-center border-t border-white/[0.08] bg-[#0E1520] shrink-0">
+        <CopyrightNotice variant="light" />
+      </footer>
 
       {/* 
         ====================================================================
