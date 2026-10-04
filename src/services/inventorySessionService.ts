@@ -25,6 +25,7 @@ import { NormalizedProduct } from '../types/inventory';
 import { getLocalIndexedDbState, searchLocalProducts } from './indexedDbService';
 import { UserProfile } from './authService';
 import { getBranch } from './branchService';
+import { recordAuditEvent } from './auditLogService';
 import * as XLSX from 'xlsx';
 
 const SESSIONS_COLL = 'inventory_sessions';
@@ -247,6 +248,19 @@ export async function activateSession(
     baselineChecksum: checksum,
     startedAt: serverTimestamp(),
     startedByUid: currentUser.uid,
+  });
+
+  await recordAuditEvent('inventory_session_started', {
+    entityType: 'inventory',
+    targetId: sessionId,
+    targetName: session.name,
+    details: {
+      branchId: session.branchId,
+      branchName: session.branchName,
+      type: session.type,
+      baselineProductCount: baselineEntries.length,
+    },
+    severity: 'info',
   });
 }
 

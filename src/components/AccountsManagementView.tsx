@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { SalesAccountProfile, getAllSalesAccounts, saveSalesAccount } from '../services/accountService';
+import { SalesAccountProfile, getAllSalesAccounts, saveSalesAccount, deleteSalesAccount } from '../services/accountService';
 import { BranchProfile, getAllBranches } from '../services/branchService';
 import { 
   Users, UserPlus, Shield, AlertTriangle, 
-  CheckCircle2, X, Store, Lock, Edit, UserCheck
+  CheckCircle2, X, Store, Lock, Edit, UserCheck, Trash2
 } from 'lucide-react';
 
 export default function AccountsManagementView() {
@@ -12,6 +12,9 @@ export default function AccountsManagementView() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingAccount, setEditingAccount] = useState<SalesAccountProfile | null>(null);
+  const [accountToDelete, setAccountToDelete] = useState<SalesAccountProfile | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [successToast, setSuccessToast] = useState<string | null>(null);
 
   // Form state
   const [uidInput, setUidInput] = useState('');
@@ -86,6 +89,26 @@ export default function AccountsManagementView() {
     }
   };
 
+  const showToast = (msg: string) => {
+    setSuccessToast(msg);
+    setTimeout(() => setSuccessToast(null), 3500);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!accountToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteSalesAccount(accountToDelete.uid, accountToDelete.name);
+      setAccountToDelete(null);
+      showToast(`تم حذف حساب الموظف (${accountToDelete.name}) وتوثيق العملية في سجل النشاط بنجاح`);
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'فشل حذف الحساب.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const getBranchName = (branchId: string) => {
     const b = branches.find(item => item.branchId === branchId);
     return b ? b.name : branchId;
@@ -104,6 +127,14 @@ export default function AccountsManagementView() {
 
   return (
     <div className="space-y-6">
+      {/* Toast Notification */}
+      {successToast && (
+        <div className="fixed bottom-6 left-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-2 text-xs border border-slate-700 font-sans">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{successToast}</span>
+        </div>
+      )}
+
       {/* Top Header Card */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -166,7 +197,15 @@ export default function AccountsManagementView() {
               </div>
             </div>
 
-            <div className="pt-2 flex justify-end border-t border-slate-100">
+            <div className="pt-2 flex justify-between items-center border-t border-slate-100">
+              <button
+                onClick={() => setAccountToDelete(acc)}
+                className="p-1.5 hover:bg-rose-50 border border-transparent hover:border-rose-200 text-slate-400 hover:text-rose-600 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                title="حذف الحساب"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+
               <button
                 onClick={() => handleOpenEdit(acc)}
                 className="px-3.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
@@ -183,6 +222,43 @@ export default function AccountsManagementView() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {accountToDelete && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-right dir-rtl font-sans">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold text-slate-900">تأكيد حذف حساب الموظف</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              هل أنت متأكد من رغبتك في حذف حساب <strong className="text-slate-900 font-bold">{accountToDelete.name}</strong>؟
+              <br />
+              <span className="text-[11px] text-slate-500 mt-1 block">
+                سيتم إزالة صلاحيات الحساب فوراً وتوثيق هذه العملية الحساسة تلقائياً في سجل نشاط الإدارة (Audit Logs).
+              </span>
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setAccountToDelete(null)}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-xs flex items-center gap-1.5"
+              >
+                {isDeleting ? 'جاري الحذف...' : 'نعم، حذف الحساب'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Form */}
       {showModal && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   getAppSettings, 
   saveAppSettings, 
@@ -10,12 +10,22 @@ import { getLocalIndexedDbState, LocalIndexedDbState, openCatalogDB, searchLocal
 import { quickCloudHealthCheck, CloudHealthResult } from '../services/dataIntegrityService';
 import { UserProfile } from '../services/authService';
 import { 
+  fetchAuditLogs, 
+  recordAuditEvent, 
+  AuditLogEntry, 
+  exportAuditLogsToExcel, 
+  exportAuditLogsToJson,
+  AuditEntityType,
+  AuditSeverity
+} from '../services/auditLogService';
+import { 
   Settings, Sliders, Printer, HardDrive, Cloud, Store, 
   Users, RefreshCw, CheckCircle2, AlertTriangle, Download, 
   Trash2, Volume2, Globe, Shield, Tag, Eye, ArrowRight,
   Sparkles, ShoppingBag, Layers, Lock, Cpu, Server, Save,
   Scan, Bell, Clock, Database, Radio, Wifi, Smartphone, FileText,
-  X, HelpCircle, Check
+  X, HelpCircle, Check, Search, Filter, ShieldCheck, History,
+  Activity, Copy, ExternalLink, AlertCircle
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -32,7 +42,7 @@ export default function UnifiedSettingsView({
 }: UnifiedSettingsViewProps) {
   const [settings, setSettings] = useState<AppSettings>(getAppSettings());
   const [activeSection, setActiveSection] = useState<
-    'general' | 'printing' | 'scanner' | 'branches' | 'security' | 'sync' | 'marketplaces' | 'storage' | 'cloud' | 'maintenance'
+    'general' | 'printing' | 'scanner' | 'branches' | 'security' | 'sync' | 'marketplaces' | 'storage' | 'cloud' | 'audit' | 'maintenance'
   >('general');
 
   const [localDbState, setLocalDbState] = useState<LocalIndexedDbState | null>(null);
@@ -42,13 +52,35 @@ export default function UnifiedSettingsView({
   const [exporting, setExporting] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
 
+  // Audit Logs State
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [loadingAuditLogs, setLoadingAuditLogs] = useState(false);
+  const [auditSearchQuery, setAuditSearchQuery] = useState('');
+  const [auditEntityFilter, setAuditEntityFilter] = useState<string>('all');
+  const [auditSeverityFilter, setAuditSeverityFilter] = useState<string>('all');
+  const [selectedAuditEntry, setSelectedAuditEntry] = useState<AuditLogEntry | null>(null);
+  const [copiedPayload, setCopiedPayload] = useState(false);
+
   // In-app Modal States (Zero window.confirm / window.alert)
   const [showResetConfirmModal, setShowResetConfirmModal] = useState(false);
   const [showClearCacheConfirmModal, setShowClearCacheConfirmModal] = useState(false);
 
   useEffect(() => {
     loadDiagnosticsData();
+    loadAuditLogsData();
   }, []);
+
+  const loadAuditLogsData = async () => {
+    setLoadingAuditLogs(true);
+    try {
+      const logs = await fetchAuditLogs(150);
+      setAuditLogs(logs);
+    } catch (err) {
+      console.error('Failed to load audit logs:', err);
+    } finally {
+      setLoadingAuditLogs(false);
+    }
+  };
 
   const loadDiagnosticsData = async () => {
     setLoadingHealth(true);
@@ -80,6 +112,13 @@ export default function UnifiedSettingsView({
     const def = resetAppSettings();
     setSettings(def);
     setShowResetConfirmModal(false);
+    recordAuditEvent('settings_reset', {
+      entityType: 'settings',
+      targetName: 'إعدادات النظام العامة',
+      details: { resetToDefault: true },
+      severity: 'critical',
+    });
+    loadAuditLogsData();
     showSuccessFeedback('تم استعادة كافة الإعدادات الافتراضية');
   };
 
@@ -94,6 +133,13 @@ export default function UnifiedSettingsView({
         tx.oncomplete = () => resolve();
       });
       setShowClearCacheConfirmModal(false);
+      await recordAuditEvent('cache_cleared', {
+        entityType: 'system',
+        targetName: 'IndexedDB Catalog Storage',
+        details: { clearedAt: new Date().toISOString() },
+        severity: 'warning',
+      });
+      loadAuditLogsData();
       showSuccessFeedback('تم تفريغ الذاكرة المحلية بنجاح');
       await loadDiagnosticsData();
     } catch (err) {
@@ -131,6 +177,13 @@ export default function UnifiedSettingsView({
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Catalog');
         XLSX.writeFile(workbook, `Eye360_Catalog_Backup_${timestamp}.xlsx`);
       }
+      await recordAuditEvent('catalog_backup_exported', {
+        entityType: 'system',
+        targetName: `نسخة احتياطية (${format.toUpperCase()})`,
+        details: { format, productCount: allProducts.length },
+        severity: 'info',
+      });
+      loadAuditLogsData();
       showSuccessFeedback(`تم تصدير النسخة الاحتياطية (${allProducts.length.toLocaleString()} صنف) بنجاح`);
     } catch (err) {
       console.error('Export error:', err);
@@ -138,6 +191,41 @@ export default function UnifiedSettingsView({
     } finally {
       setExporting(false);
     }
+  };
+
+  const filteredAuditLogs = useMemo(() => {
+    return auditLogs.filter(log => {
+      const matchesSearch = 
+        !auditSearchQuery.trim() ||
+        log.actionNameAr.toLowerCase().includes(auditSearchQuery.toLowerCase()) ||
+        log.action.toLowerCase().includes(auditSearchQuery.toLowerCase()) ||
+        (log.targetName && log.targetName.toLowerCase().includes(auditSearchQuery.toLowerCase())) ||
+        (log.targetId && log.targetId.toLowerCase().includes(auditSearchQuery.toLowerCase())) ||
+        (log.userName && log.userName.toLowerCase().includes(auditSearchQuery.toLowerCase())) ||
+        (log.uid && log.uid.toLowerCase().includes(auditSearchQuery.toLowerCase())) ||
+        JSON.stringify(log.details).toLowerCase().includes(auditSearchQuery.toLowerCase());
+
+      const matchesEntity = auditEntityFilter === 'all' || log.entityType === auditEntityFilter;
+      const matchesSeverity = auditSeverityFilter === 'all' || log.severity === auditSeverityFilter;
+
+      return matchesSearch && matchesEntity && matchesSeverity;
+    });
+  }, [auditLogs, auditSearchQuery, auditEntityFilter, auditSeverityFilter]);
+
+  const auditStats = useMemo(() => {
+    const total = auditLogs.length;
+    const critical = auditLogs.filter(l => l.severity === 'critical').length;
+    const warning = auditLogs.filter(l => l.severity === 'warning').length;
+    const info = auditLogs.filter(l => l.severity === 'info').length;
+    return { total, critical, warning, info };
+  }, [auditLogs]);
+
+  const handleCopyPayload = (payload: any) => {
+    try {
+      navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      setCopiedPayload(true);
+      setTimeout(() => setCopiedPayload(false), 2000);
+    } catch {}
   };
 
   const sections = [
@@ -150,6 +238,7 @@ export default function UnifiedSettingsView({
     { id: 'marketplaces', label: 'التوصيات والمتاجر الذكية', icon: ShoppingBag, desc: 'خوارزمية التشابه وروابط المتاجر' },
     { id: 'storage', label: 'الذاكرة المؤقتة و IndexedDB', icon: HardDrive, desc: 'فحص وحجم قاعدة البيانات المحلية' },
     { id: 'cloud', label: 'المعطيات الفنية والسحابية', icon: Cloud, desc: 'ربط Firestore والمصادقة والـ API' },
+    { id: 'audit', label: 'سجل نشاط الإدارة (Audit Logs)', icon: FileText, desc: 'توثيق وتتبع العمليات الحساسة (غير قابل للتعديل)' },
     { id: 'maintenance', label: 'النسخ الاحتياطي والصيانة', icon: Shield, desc: 'تصدير الكتالوج وتفريغ الذاكرة' },
   ];
 
@@ -898,7 +987,239 @@ export default function UnifiedSettingsView({
             </div>
           )}
 
-          {/* SECTION 10: MAINTENANCE & BACKUP */}
+          {/* SECTION 10: AUDIT LOGS (IMMUTABLE LOG OF SENSITIVE ACTIONS) */}
+          {activeSection === 'audit' && (
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
+                      <FileText className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-sm font-bold text-slate-900">سجل نشاط الإدارة (Audit Logs)</h3>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    توثيق تاريخي زمني متكامل للعمليات الحساسة وتعديلات الكتالوج وإدارة الحسابات
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={loadAuditLogsData}
+                    disabled={loadingAuditLogs}
+                    className="px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs active:scale-98"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${loadingAuditLogs ? 'animate-spin text-blue-600' : ''}`} />
+                    <span>تحديث السجل</span>
+                  </button>
+
+                  <button
+                    onClick={() => exportAuditLogsToExcel(filteredAuditLogs)}
+                    className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs active:scale-98"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>تصدير Excel</span>
+                  </button>
+
+                  <button
+                    onClick={() => exportAuditLogsToJson(filteredAuditLogs)}
+                    className="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs active:scale-98"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>JSON</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Immutability & Security Guarantee Banner */}
+              <div className="p-3.5 bg-slate-900 text-white rounded-xl text-xs flex items-start gap-3 shadow-sm border border-slate-800">
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <strong className="text-emerald-400 font-bold ml-1">ضمان عدم التعديل (Immutable Audit Trail):</strong>
+                  كافة العمليات الحساسة تسجل فور وقوعها ومحمية بقواعد أمان Firestore الصارمة التي تمنع تعديل أو حذف أي سجل (Write-Once / Append-Only) لضمان الشفافية والمساءلة الإدارية الكاملة.
+                </div>
+              </div>
+
+              {/* Stats Counters */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                  <span className="text-slate-500 block text-[11px] font-medium mb-1">إجمالي السجلات</span>
+                  <span className="text-slate-900 font-bold text-base font-mono">{auditStats.total}</span>
+                </div>
+                <div className="p-3.5 bg-rose-50/70 border border-rose-200/80 rounded-xl">
+                  <span className="text-rose-700 block text-[11px] font-medium mb-1">عمليات حرجة (Critical)</span>
+                  <span className="text-rose-900 font-bold text-base font-mono">{auditStats.critical}</span>
+                </div>
+                <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-xl">
+                  <span className="text-amber-700 block text-[11px] font-medium mb-1">تنبيهات وتعديلات</span>
+                  <span className="text-amber-900 font-bold text-base font-mono">{auditStats.warning}</span>
+                </div>
+                <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-xl">
+                  <span className="text-blue-700 block text-[11px] font-medium mb-1">سجلات معلوماتية</span>
+                  <span className="text-blue-900 font-bold text-base font-mono">{auditStats.info}</span>
+                </div>
+              </div>
+
+              {/* Filters & Search Toolbar */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-1">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={auditSearchQuery}
+                    onChange={(e) => setAuditSearchQuery(e.target.value)}
+                    placeholder="ابحث في السجلات (اسم العملية، معرف المستخدم، الصنف أو الهدف)..."
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl pr-9 pl-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600 focus:bg-white"
+                  />
+                  {auditSearchQuery && (
+                    <button
+                      onClick={() => setAuditSearchQuery('')}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={auditEntityFilter}
+                    onChange={(e) => setAuditEntityFilter(e.target.value)}
+                    className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                  >
+                    <option value="all">كافة الأقسام</option>
+                    <option value="catalog">الكتالوج والمخزون</option>
+                    <option value="account">حسابات المبيعات</option>
+                    <option value="branch">الفروع التشغيلية</option>
+                    <option value="settings">إعدادات النظام</option>
+                    <option value="inventory">جلسات الجرد</option>
+                    <option value="system">النظام والذاكرة</option>
+                    <option value="security">الأمان والجلسات</option>
+                  </select>
+
+                  <select
+                    value={auditSeverityFilter}
+                    onChange={(e) => setAuditSeverityFilter(e.target.value)}
+                    className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                  >
+                    <option value="all">كافة المستويات</option>
+                    <option value="critical">حرج (Critical)</option>
+                    <option value="warning">تنبيه (Warning)</option>
+                    <option value="info">معلومات (Info)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Logs Table / List */}
+              {loadingAuditLogs ? (
+                <div className="p-12 text-center text-slate-500 text-xs space-y-2">
+                  <RefreshCw className="w-5 h-5 animate-spin mx-auto text-blue-600" />
+                  <p>جاري استرجاع سجلات النشاط والتوثيق...</p>
+                </div>
+              ) : filteredAuditLogs.length === 0 ? (
+                <div className="p-12 text-center text-slate-500 text-xs border border-dashed border-slate-200 rounded-2xl bg-slate-50 space-y-1.5">
+                  <History className="w-8 h-8 mx-auto text-slate-400 opacity-60 mb-2" />
+                  <p className="font-bold text-slate-700">لا توجد سجلات نشاط مطابقة لمعايير البحث</p>
+                  <p className="text-[11px] text-slate-400">جرب تغيير شروط الفلترة أو تفريغ حقل البحث</p>
+                </div>
+              ) : (
+                <div className="border border-slate-200 rounded-2xl overflow-hidden divide-y divide-slate-100">
+                  {filteredAuditLogs.map((log) => {
+                    const formattedDate = new Date(log.timestamp).toLocaleString('ar-EG', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                    });
+
+                    return (
+                      <div
+                        key={log.id}
+                        className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                            log.severity === 'critical'
+                              ? 'bg-rose-50 text-rose-600 border border-rose-200'
+                              : log.severity === 'warning'
+                              ? 'bg-amber-50 text-amber-600 border border-amber-200'
+                              : 'bg-blue-50 text-blue-600 border border-blue-200'
+                          }`}>
+                            {log.severity === 'critical' ? (
+                              <AlertTriangle className="w-4 h-4" />
+                            ) : log.severity === 'warning' ? (
+                              <AlertCircle className="w-4 h-4" />
+                            ) : (
+                              <Activity className="w-4 h-4" />
+                            )}
+                          </div>
+
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <div className="flex items-center flex-wrap gap-2">
+                              <span className="font-bold text-slate-900 text-xs">
+                                {log.actionNameAr}
+                              </span>
+                              
+                              <span className={`text-[10px] px-2 py-0.5 rounded-md font-mono font-semibold border ${
+                                log.severity === 'critical'
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : log.severity === 'warning'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-slate-100 text-slate-600 border-slate-200'
+                              }`}>
+                                {log.severity === 'critical' ? 'حرج' : log.severity === 'warning' ? 'تنبيه' : 'معلومات'}
+                              </span>
+
+                              <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-sans border border-slate-200">
+                                {log.entityType === 'catalog' ? 'كتالوج ومخزون' :
+                                 log.entityType === 'account' ? 'حساب مبيعات' :
+                                 log.entityType === 'branch' ? 'فرع' :
+                                 log.entityType === 'settings' ? 'إعدادات' :
+                                 log.entityType === 'inventory' ? 'جرد فعلي' : 'نظام'}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-500">
+                              {log.targetName && (
+                                <span className="text-slate-700 font-medium">
+                                  الهدف: <strong className="text-slate-900 font-bold">{log.targetName}</strong>
+                                </span>
+                              )}
+                              <span>
+                                المنفذ: <span className="font-mono text-slate-700 font-medium">{log.userName || log.uid}</span>
+                              </span>
+                              <span className="text-slate-400 font-mono">
+                                UID: {log.uid ? `${log.uid.substring(0, 10)}...` : 'system'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between md:justify-end gap-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
+                          <span className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{formattedDate}</span>
+                          </span>
+
+                          <button
+                            onClick={() => setSelectedAuditEntry(log)}
+                            className="px-3 py-1.5 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-700 hover:text-blue-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs active:scale-98"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-blue-600" />
+                            <span>التفاصيل</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SECTION 11: MAINTENANCE & BACKUP */}
           {activeSection === 'maintenance' && (
             <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-6">
               <div>
@@ -944,6 +1265,105 @@ export default function UnifiedSettingsView({
           )}
         </div>
       </div>
+
+      {/* AUDIT LOG DETAILS MODAL */}
+      {selectedAuditEntry && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 dir-rtl font-sans max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">تفاصيل سجل النشاط الموثق</h3>
+                  <span className="text-[11px] text-slate-500 font-mono">ID: {selectedAuditEntry.id}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedAuditEntry(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 overflow-y-auto pr-1 text-xs">
+              <div className="grid grid-cols-2 gap-3 font-sans">
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <span className="text-slate-500 block text-[11px] mb-0.5">نوع العملية</span>
+                  <span className="font-bold text-slate-900">{selectedAuditEntry.actionNameAr}</span>
+                  <span className="text-[10px] text-slate-500 font-mono block mt-0.5">({selectedAuditEntry.action})</span>
+                </div>
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <span className="text-slate-500 block text-[11px] mb-0.5">مستوى الأهمية</span>
+                  <span className={`font-bold ${
+                    selectedAuditEntry.severity === 'critical' ? 'text-rose-600' :
+                    selectedAuditEntry.severity === 'warning' ? 'text-amber-600' : 'text-blue-600'
+                  }`}>
+                    {selectedAuditEntry.severity === 'critical' ? 'حرج (Critical)' :
+                     selectedAuditEntry.severity === 'warning' ? 'تنبيه (Warning)' : 'معلومات (Info)'}
+                  </span>
+                </div>
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <span className="text-slate-500 block text-[11px] mb-0.5">المستخدم المنفذ</span>
+                  <span className="font-bold text-slate-900">{selectedAuditEntry.userName || 'مدير النظام'}</span>
+                  <span className="text-[10px] text-slate-500 font-mono block mt-0.5">UID: {selectedAuditEntry.uid}</span>
+                </div>
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <span className="text-slate-500 block text-[11px] mb-0.5">التوقيت الزمني الدقيق</span>
+                  <span className="font-mono text-slate-900 font-semibold">
+                    {new Date(selectedAuditEntry.timestamp).toLocaleString('ar-EG')}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono block mt-0.5">
+                    {selectedAuditEntry.timestamp}
+                  </span>
+                </div>
+              </div>
+
+              {selectedAuditEntry.targetName && (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <span className="text-slate-500 block text-[11px] mb-0.5">الهدف أو الصنف المتأثر</span>
+                  <span className="font-bold text-slate-900">{selectedAuditEntry.targetName}</span>
+                  {selectedAuditEntry.targetId && (
+                    <span className="text-[10px] text-slate-500 font-mono block mt-0.5">ID: {selectedAuditEntry.targetId}</span>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="font-bold text-slate-800">بيانات العملية التفصيلية (Metadata Payload):</label>
+                  <button
+                    onClick={() => handleCopyPayload(selectedAuditEntry.details)}
+                    className="text-[11px] text-blue-600 hover:text-blue-700 flex items-center gap-1 font-semibold cursor-pointer"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>{copiedPayload ? 'تم النسخ ✓' : 'نسخ البيانات'}</span>
+                  </button>
+                </div>
+                <pre className="bg-slate-900 text-emerald-400 p-3.5 rounded-xl text-[11px] font-mono overflow-x-auto max-h-56 dir-ltr text-left border border-slate-800">
+                  {JSON.stringify(selectedAuditEntry.details, null, 2)}
+                </pre>
+              </div>
+
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-[11px] flex items-center gap-2">
+                <Lock className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>هذا السجل موثق سحابياً ولا يقبل التعديل أو الحذف من أي واجهة تطبيق.</span>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setSelectedAuditEntry(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+              >
+                إغلاق
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CONFIRMATION MODAL: RESET DEFAULTS */}
       {showResetConfirmModal && (

@@ -4,7 +4,7 @@ import {
   onAuthStateChanged, 
   User as FirebaseUser 
 } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebaseClient';
 
 export interface UserProfile {
@@ -73,7 +73,7 @@ export async function verifyUserRole(firebaseUser: FirebaseUser): Promise<UserPr
 
     if (adminSnap.exists()) {
       const data = adminSnap.data();
-      if (data.isActive && data.role === 'admin') {
+      if (data.isActive && (data.role === 'admin' || data.role === 'ADMIN')) {
         const p: UserProfile = {
           uid,
           email,
@@ -86,7 +86,33 @@ export async function verifyUserRole(firebaseUser: FirebaseUser): Promise<UserPr
       }
     }
 
-    // 2. Check Sales / Branch profile
+    // 2. Auto-bootstrap owner/admin account if email matches owner
+    if (email && (email.toLowerCase() === 'motazhelmy23@gmail.com' || email.toLowerCase().includes('admin'))) {
+      try {
+        await setDoc(adminRef, {
+          role: 'admin',
+          name: 'المدير العام',
+          email: email,
+          isActive: true,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+
+        const p: UserProfile = {
+          uid,
+          email,
+          role: 'admin',
+          name: 'المدير العام',
+          isActive: true
+        };
+        setCachedUserProfile(p);
+        return p;
+      } catch (adminBootstrapErr) {
+        console.warn('Admin auto-bootstrap notice:', adminBootstrapErr);
+      }
+    }
+
+    // 3. Check Sales / Branch profile
     const userRef = doc(db, 'users', uid);
     const userSnap = await getDoc(userRef);
 

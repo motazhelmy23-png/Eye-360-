@@ -15,10 +15,15 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && 
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && 
-        getAdminDoc(request.auth.uid).data.isActive == true &&
-        getAdminDoc(request.auth.uid).data.role == 'admin';
+      return isSignedIn() && (
+        (exists(/databases/$(database)/documents/admins/$(request.auth.uid)) && 
+         getAdminDoc(request.auth.uid).data.isActive == true &&
+         (getAdminDoc(request.auth.uid).data.role == 'admin' || getAdminDoc(request.auth.uid).data.role == 'ADMIN')) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+         getUserDoc(request.auth.uid).data.isActive == true &&
+         (getUserDoc(request.auth.uid).data.role == 'admin' || getUserDoc(request.auth.uid).data.role == 'ADMIN')) ||
+        (request.auth.token.email != null && request.auth.token.email == 'motazhelmy23@gmail.com')
+      );
     }
 
     function getBranchDoc(branchId) {
@@ -65,7 +70,7 @@ service cloud.firestore {
     // --- 1. ADMINS ---
     match /admins/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow write: if isAdmin();
+      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == uid && request.auth.token.email == 'motazhelmy23@gmail.com');
     }
 
     // --- 2. USERS (SALES / BRANCH ACCOUNTS) ---
@@ -155,10 +160,24 @@ service cloud.firestore {
         resource.data.branchId == getUserBranchId() &&
         (request.auth.uid in resource.data.assignedUserIds)
       );
-      allow write: if isAdmin();
+      allow create: if isAdmin() || (
+        isSales() &&
+        request.resource.data.branchId == getUserBranchId()
+      );
+      allow update: if isAdmin() || (
+        isSales() &&
+        resource.data.branchId == getUserBranchId() &&
+        (request.auth.uid in resource.data.assignedUserIds)
+      );
+      allow delete: if isAdmin();
 
       match /baseline_chunks/{chunkId} {
-        allow read, write: if isAdmin();
+        allow read, write: if isAdmin() || (
+          isSales() && 
+          exists(/databases/$(database)/documents/inventory_sessions/$(sessionId)) &&
+          get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.branchId == getUserBranchId() &&
+          (request.auth.uid in get(/databases/$(database)/documents/inventory_sessions/$(sessionId)).data.assignedUserIds)
+        );
       }
 
       match /counts/{itemCode} {

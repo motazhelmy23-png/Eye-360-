@@ -1,6 +1,7 @@
 import { doc, getDoc, setDoc, updateDoc, collection, getDocs, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebaseClient';
 import { getActiveCatalogMeta, openCatalogDB } from './indexedDbService';
+import { recordAuditEvent } from './auditLogService';
 
 export interface BranchProfile {
   branchId: string;
@@ -134,6 +135,18 @@ export async function saveBranch(branch: BranchProfile, uid: string): Promise<vo
       updatedAt: serverTimestamp(),
       updatedByUid: uid,
     });
+
+    await recordAuditEvent('branch_updated', {
+      entityType: 'branch',
+      targetId: branch.branchId,
+      targetName: branch.name,
+      details: {
+        code: branch.code,
+        inventoryLocationId: branch.inventoryLocationId,
+        isActive: branch.isActive,
+      },
+      severity: 'warning',
+    });
   } else {
     await setDoc(ref, {
       name: branch.name,
@@ -145,6 +158,18 @@ export async function saveBranch(branch: BranchProfile, uid: string): Promise<vo
       createdByUid: uid,
       updatedAt: serverTimestamp(),
       updatedByUid: uid,
+    });
+
+    await recordAuditEvent('branch_created', {
+      entityType: 'branch',
+      targetId: branch.branchId,
+      targetName: branch.name,
+      details: {
+        code: branch.code,
+        inventoryLocationId: branch.inventoryLocationId,
+        isActive: branch.isActive,
+      },
+      severity: 'warning',
     });
   }
 }
