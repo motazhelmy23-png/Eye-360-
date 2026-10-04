@@ -81,7 +81,19 @@ export default function SalesDashboard({ profile, branchProfile, onLogout }: Sal
       if (profile.branchId && profile.uid) {
         try {
           const sess = await getInventorySessions(profile.branchId, profile.uid);
-          setAssignedSessions(sess.filter(s => s.status === 'ACTIVE' || s.status === 'REVIEW'));
+          const activeSess = sess.filter(s => s.status === 'ACTIVE' || s.status === 'REVIEW');
+          setAssignedSessions(activeSess);
+
+          // Restore session on reload if previously counting
+          const savedSessionId = localStorage.getItem('eye360_active_count_session_id');
+          if (savedSessionId) {
+            const found = activeSess.find(s => s.id === savedSessionId);
+            if (found) {
+              setActiveCountSession(found);
+            } else {
+              localStorage.removeItem('eye360_active_count_session_id');
+            }
+          }
         } catch (sessErr) {
           console.warn('Could not load inventory sessions:', sessErr);
         }
@@ -249,6 +261,9 @@ export default function SalesDashboard({ profile, branchProfile, onLogout }: Sal
           currentUser={profile}
           branchProfile={branchProfile}
           onBack={() => {
+            try {
+              localStorage.removeItem('eye360_active_count_session_id');
+            } catch {}
             setActiveCountSession(null);
             initDashboard();
           }}
@@ -361,7 +376,12 @@ export default function SalesDashboard({ profile, branchProfile, onLogout }: Sal
                   </div>
 
                   <button
-                    onClick={() => setActiveCountSession(sess)}
+                    onClick={() => {
+                      try {
+                        localStorage.setItem('eye360_active_count_session_id', sess.id);
+                      } catch {}
+                      setActiveCountSession(sess);
+                    }}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all shrink-0"
                   >
                     <span>{sess.status === 'ACTIVE' ? 'بدء الجرد' : 'متابعة إعادة الجرد'}</span>

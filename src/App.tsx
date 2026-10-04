@@ -31,6 +31,54 @@ import {
   ArrowRight
 } from 'lucide-react';
 
+export type AdminTab =
+  | 'overview'
+  | 'daily_update'
+  | 'catalog_replacement'
+  | 'products'
+  | 'branches'
+  | 'accounts'
+  | 'inventory_history'
+  | 'catalog_history'
+  | 'inventory_count'
+  | 'reports'
+  | 'settings';
+
+export const VALID_ADMIN_TABS: AdminTab[] = [
+  'overview',
+  'daily_update',
+  'catalog_replacement',
+  'products',
+  'branches',
+  'accounts',
+  'inventory_history',
+  'catalog_history',
+  'inventory_count',
+  'reports',
+  'settings'
+];
+
+export function getSavedAdminTab(): AdminTab {
+  try {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash.startsWith('#/admin/')) {
+        const tabFromHash = hash.replace('#/admin/', '').split('?')[0].split('/')[0] as AdminTab;
+        if (VALID_ADMIN_TABS.includes(tabFromHash)) {
+          return tabFromHash;
+        }
+      }
+      const saved = localStorage.getItem('eye360_active_admin_tab') as AdminTab;
+      if (saved && VALID_ADMIN_TABS.includes(saved)) {
+        return saved;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to parse active admin tab:', e);
+  }
+  return 'overview';
+}
+
 export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [branchProfile, setBranchProfile] = useState<BranchProfile | null>(null);
@@ -53,33 +101,41 @@ export default function App() {
 
   const [diagnostics, setDiagnostics] = useState<any>(null);
   
-  // Admin Navigation State
-  const [activeAdminTab, setActiveAdminTab] = useState<
-    | 'overview'
-    | 'daily_update'
-    | 'catalog_replacement'
-    | 'products'
-    | 'branches'
-    | 'accounts'
-    | 'inventory_history'
-    | 'catalog_history'
-    | 'inventory_count'
-    | 'reports'
-    | 'settings'
-  >('overview');
+  // Admin Navigation State (Restored from URL hash / localStorage on reload)
+  const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>(getSavedAdminTab);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  const handleSelectAdminTab = (tab: AdminTab) => {
+    setActiveAdminTab(tab);
+    try {
+      localStorage.setItem('eye360_active_admin_tab', tab);
+      if (window.location.hash !== `#/admin/${tab}`) {
+        window.location.hash = `#/admin/${tab}`;
+      }
+    } catch (e) {
+      console.warn('Failed to save active admin tab:', e);
+    }
+  };
+
   useEffect(() => {
-    // Check URL hash or path for portal routing
+    // Check URL hash or path for portal routing & admin tabs
     const checkHashRoute = () => {
       const hash = window.location.hash;
       if (hash === '#/login/admin') {
         setLoginMode('admin');
       } else if (hash === '#/login/branch') {
         setLoginMode('branch');
-      } else {
+      } else if (hash.startsWith('#/admin/')) {
+        const tabFromHash = hash.replace('#/admin/', '').split('?')[0].split('/')[0] as AdminTab;
+        if (VALID_ADMIN_TABS.includes(tabFromHash)) {
+          setActiveAdminTab(tabFromHash);
+          try {
+            localStorage.setItem('eye360_active_admin_tab', tabFromHash);
+          } catch {}
+        }
+      } else if (!hash || hash === '#/' || hash === '#/login') {
         setLoginMode('selector');
       }
     };
@@ -100,6 +156,11 @@ export default function App() {
           setBranchProfile(null);
         }
         if (userProfile.role === 'admin') {
+          const currentTab = getSavedAdminTab();
+          setActiveAdminTab(currentTab);
+          if (!window.location.hash.startsWith('#/admin/')) {
+            window.location.hash = `#/admin/${currentTab}`;
+          }
           const diag = await getSystemDiagnostics(userProfile);
           setDiagnostics(diag);
         }
@@ -699,7 +760,7 @@ export default function App() {
                   <button
                     key={item.id}
                     onClick={() => {
-                      setActiveAdminTab(item.id as any);
+                      handleSelectAdminTab(item.id as any);
                       setMobileMenuOpen(false);
                     }}
                     title={sidebarCollapsed ? item.label : undefined}
@@ -805,7 +866,7 @@ export default function App() {
               <UnifiedSettingsView 
                 currentUser={profile} 
                 diagnostics={diagnostics} 
-                onNavigateTab={(tab) => setActiveAdminTab(tab as any)} 
+                onNavigateTab={(tab) => handleSelectAdminTab(tab as any)} 
               />
             )}
 

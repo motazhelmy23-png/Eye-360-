@@ -43,7 +43,20 @@ export default function UnifiedSettingsView({
   const [settings, setSettings] = useState<AppSettings>(getAppSettings());
   const [activeSection, setActiveSection] = useState<
     'general' | 'printing' | 'scanner' | 'branches' | 'security' | 'sync' | 'marketplaces' | 'storage' | 'cloud' | 'audit' | 'maintenance'
-  >('general');
+  >(() => {
+    try {
+      const saved = localStorage.getItem('eye360_active_settings_section');
+      if (saved) return saved as any;
+    } catch {}
+    return 'general';
+  });
+
+  const handleSelectSection = (sec: any) => {
+    setActiveSection(sec);
+    try {
+      localStorage.setItem('eye360_active_settings_section', sec);
+    } catch {}
+  };
 
   const [localDbState, setLocalDbState] = useState<LocalIndexedDbState | null>(null);
   const [cloudHealth, setCloudHealth] = useState<CloudHealthResult | null>(null);
@@ -296,7 +309,7 @@ export default function UnifiedSettingsView({
               return (
                 <button
                   key={sec.id}
-                  onClick={() => setActiveSection(sec.id as any)}
+                  onClick={() => handleSelectSection(sec.id)}
                   className={`w-full p-3 rounded-xl text-right transition-all flex items-start gap-3 cursor-pointer ${
                     isActive
                       ? 'bg-blue-50/80 border border-blue-200 text-blue-900 shadow-2xs'
